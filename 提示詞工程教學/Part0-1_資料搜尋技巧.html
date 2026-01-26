@@ -335,6 +335,56 @@
             font-size: 14px;
         }
 
+        /* 可編輯輸入框 */
+        .input-area {
+            position: relative;
+            margin: 10px 0;
+        }
+
+        .editable-input {
+            width: 100%;
+            min-height: 80px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            resize: vertical;
+            background: #fff;
+            color: #333;
+            transition: border-color 0.3s;
+        }
+
+        .editable-input:focus {
+            outline: none;
+            border-color: #1a237e;
+            box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1);
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #1a237e, #0288d1);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .copy-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(26, 35, 126, 0.3);
+        }
+
+        .copy-btn.copied {
+            background: linear-gradient(135deg, #2e7d32, #43a047);
+        }
+
         @media (max-width: 768px) {
             .content-card { padding: 25px; }
             h1 { font-size: 28px; }
@@ -466,40 +516,40 @@
 
                 <h3>學術資料庫</h3>
                 <div class="concept-grid">
-                    <div class="concept-card">
-                        <div class="icon">Scholar</div>
+                    <a href="https://scholar.google.com/" target="_blank" class="concept-card" style="text-decoration: none; color: inherit;">
+                        <div class="icon">🎓</div>
                         <h4>Google Scholar</h4>
                         <p style="font-size: 14px;">學術論文、期刊文獻搜尋首選</p>
-                    </div>
-                    <div class="concept-card">
-                        <div class="icon">ERIC</div>
+                    </a>
+                    <a href="https://eric.ed.gov/" target="_blank" class="concept-card" style="text-decoration: none; color: inherit;">
+                        <div class="icon">📚</div>
                         <h4>ERIC 資料庫</h4>
                         <p style="font-size: 14px;">教育研究文獻專業資料庫</p>
-                    </div>
-                    <div class="concept-card">
-                        <div class="icon">NDL</div>
+                    </a>
+                    <a href="https://www.ncl.edu.tw/" target="_blank" class="concept-card" style="text-decoration: none; color: inherit;">
+                        <div class="icon">🏛️</div>
                         <h4>國家圖書館</h4>
                         <p style="font-size: 14px;">台灣學位論文、期刊文獻</p>
-                    </div>
+                    </a>
                 </div>
 
                 <h3>教學資源平台</h3>
                 <div class="concept-grid">
-                    <div class="concept-card">
-                        <div class="icon">Edu</div>
+                    <a href="https://cloud.edu.tw/" target="_blank" class="concept-card" style="text-decoration: none; color: inherit;">
+                        <div class="icon">☁️</div>
                         <h4>教育雲</h4>
                         <p style="font-size: 14px;">教育部官方教學資源</p>
-                    </div>
-                    <div class="concept-card">
-                        <div class="icon">Khan</div>
+                    </a>
+                    <a href="https://www.khanacademy.org/" target="_blank" class="concept-card" style="text-decoration: none; color: inherit;">
+                        <div class="icon">🎯</div>
                         <h4>可汗學院</h4>
                         <p style="font-size: 14px;">免費優質教學影片</p>
-                    </div>
-                    <div class="concept-card">
-                        <div class="icon">TED</div>
+                    </a>
+                    <a href="https://ed.ted.com/" target="_blank" class="concept-card" style="text-decoration: none; color: inherit;">
+                        <div class="icon">💡</div>
                         <h4>TED-Ed</h4>
                         <p style="font-size: 14px;">啟發性教育短片</p>
-                    </div>
+                    </a>
                 </div>
 
                 <div class="highlight-box">
@@ -521,21 +571,21 @@
 
                 <h3>主流 AI 搜尋工具</h3>
                 <div class="concept-grid">
-                    <div class="concept-card">
-                        <div class="icon">Perp</div>
+                    <a href="https://www.perplexity.ai/" target="_blank" class="concept-card" style="text-decoration: none; color: inherit;">
+                        <div class="icon">🔮</div>
                         <h4>Perplexity AI</h4>
                         <p style="font-size: 14px;">即時搜尋 + AI 摘要，附帶來源引用</p>
-                    </div>
-                    <div class="concept-card">
-                        <div class="icon">Bing</div>
+                    </a>
+                    <a href="https://copilot.microsoft.com/" target="_blank" class="concept-card" style="text-decoration: none; color: inherit;">
+                        <div class="icon">🤖</div>
                         <h4>Bing Copilot</h4>
                         <p style="font-size: 14px;">結合 GPT-4 的智慧搜尋</p>
-                    </div>
-                    <div class="concept-card">
-                        <div class="icon">Gemini</div>
+                    </a>
+                    <a href="https://gemini.google.com/" target="_blank" class="concept-card" style="text-decoration: none; color: inherit;">
+                        <div class="icon">✨</div>
                         <h4>Google Gemini</h4>
                         <p style="font-size: 14px;">整合 Google 搜尋的 AI 助手</p>
-                    </div>
+                    </a>
                 </div>
 
                 <h3>AI 搜尋 vs 傳統搜尋</h3>
@@ -620,11 +670,10 @@
                     <p><strong>目標：</strong>找到 3 份關於「海洋生態」的國中教案 PDF</p>
                     <p><strong>提示：</strong>使用 site: 和 filetype: 運算子</p>
                     <p><strong>你的搜尋語法：</strong></p>
-                    <pre style="background: #fff; color: #333; border: 1px solid #ddd; padding: 10px;">
-
-
-
-</pre>
+                    <div class="input-area">
+                        <textarea id="search-input-1" class="editable-input" placeholder="在這裡輸入你的搜尋語法，例如：site:edu.tw 海洋生態 教案 filetype:pdf"></textarea>
+                        <button class="copy-btn" onclick="copyText('search-input-1', this)">複製</button>
+                    </div>
                 </div>
 
                 <div class="practice-box">
@@ -756,6 +805,36 @@
                 btn.textContent = '全螢幕';
             }
         });
+
+        // 複製功能
+        function copyText(inputId, btn) {
+            const textarea = document.getElementById(inputId);
+            const text = textarea.value;
+
+            if (!text.trim()) {
+                alert('請先輸入內容再複製！');
+                return;
+            }
+
+            navigator.clipboard.writeText(text).then(() => {
+                btn.textContent = '已複製！';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = '複製';
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                // 降級方案
+                textarea.select();
+                document.execCommand('copy');
+                btn.textContent = '已複製！';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = '複製';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
     </script>
 </body>
 </html>
