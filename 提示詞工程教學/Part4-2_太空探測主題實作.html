@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4-2 太空探測主題實作 - 提示詞工程實戰教學</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0d47a1 0%, #1565c0 50%, #1976d2 100%);
+            min-height: 100vh; overflow: hidden; color: #333;
+        }
+        .nav-bar { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: rgba(13, 71, 161, 0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.15); display: flex; justify-content: space-between; align-items: center; padding: 0 30px; z-index: 10000; }
+        .nav-title { font-size: 20px; font-weight: 700; background: linear-gradient(90deg, #90caf9, #64b5f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-buttons { display: flex; gap: 12px; }
+        .nav-btn { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 8px 18px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 600; text-decoration: none; transition: all 0.3s ease; }
+        .nav-btn:hover { background: rgba(144, 202, 249, 0.3); }
+        .nav-arrow { position: fixed; top: 50%; transform: translateY(-50%); background: rgba(13, 71, 161, 0.8); color: white; width: 60px; height: 60px; border-radius: 50%; border: 2px solid rgba(144, 202, 249, 0.5); font-size: 24px; cursor: pointer; z-index: 9000; transition: all 0.3s; display: flex; align-items: center; justify-content: center; }
+        .nav-arrow:hover { background: rgba(21, 101, 192, 0.9); transform: translateY(-50%) scale(1.1); }
+        .prev-arrow { left: 30px; } .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+        .slide-container { width: 100%; height: 100vh; padding-top: 60px; position: relative; z-index: 1; }
+        .slide { position: absolute; top: 60px; left: 0; width: 100%; height: calc(100vh - 60px); display: none; align-items: center; justify-content: center; padding: 40px; opacity: 0; transition: opacity 0.4s ease; z-index: 10; }
+        .slide.active { display: flex; opacity: 1; z-index: 20; }
+        .content-card { background: rgba(255, 255, 255, 0.97); border-radius: 24px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); padding: 40px 50px; max-width: 1350px; width: 95%; max-height: 85vh; overflow-y: auto; }
+        h1 { font-size: 42px; margin-bottom: 20px; text-align: center; background: linear-gradient(135deg, #0d47a1, #42a5f5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { color: #0d47a1; font-size: 30px; margin-bottom: 25px; border-bottom: 4px solid; border-image: linear-gradient(90deg, #0d47a1, #42a5f5) 1; padding-bottom: 12px; }
+        h3 { color: #1565c0; font-size: 22px; margin: 20px 0 12px 0; }
+        h4 { color: #1976d2; font-size: 18px; margin: 15px 0 8px 0; }
+        p, li { font-size: 17px; line-height: 1.8; color: #444; margin-bottom: 10px; }
+        ul, ol { margin-left: 25px; margin-bottom: 15px; }
+        pre { background: linear-gradient(135deg, #0d47a1, #1565c0); color: #90caf9; padding: 20px 25px; border-radius: 14px; overflow-x: auto; margin: 20px 0; font-size: 14px; line-height: 1.6; font-family: 'Consolas', monospace; border: 1px solid rgba(144, 202, 249, 0.3); white-space: pre-wrap; }
+        .highlight-box { background: linear-gradient(135deg, rgba(13, 71, 161, 0.08), rgba(66, 165, 245, 0.08)); border-left: 5px solid #0d47a1; padding: 20px 25px; border-radius: 0 15px 15px 0; margin: 20px 0; }
+        .highlight-box h4 { color: #0d47a1; margin-top: 0; }
+        .example-box { background: #f5f5f5; padding: 20px; border-radius: 12px; margin: 15px 0; border: 1px solid #e0e0e0; }
+        .example-box h4 { color: #0d47a1; margin-top: 0; margin-bottom: 10px; }
+        .copy-btn { background: linear-gradient(135deg, #0d47a1, #1976d2); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; margin-top: 10px; transition: all 0.3s; }
+        .copy-btn:hover { transform: scale(1.05); }
+        .resource-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 20px 0; }
+        .resource-card { background: linear-gradient(135deg, #e3f2fd, #bbdefb); padding: 20px; border-radius: 15px; }
+        .resource-card h4 { color: #0d47a1; margin-top: 0; }
+        .practice-box { background: linear-gradient(135deg, #fff3e0, #ffe0b2); border: 2px dashed #ff9800; padding: 25px; border-radius: 15px; margin: 20px 0; }
+        .practice-box h4 { color: #e65100; margin-top: 0; }
+        .input-wrapper {
+            position: relative;
+            margin-top: 10px;
+        }
+        .practice-input {
+            width: 100%;
+            min-height: 80px;
+            padding: 15px;
+            padding-right: 70px;
+            border: 2px dashed #ff9800;
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            resize: vertical;
+            background: #fff;
+        }
+        .practice-input:focus {
+            outline: none;
+            border-color: #f57c00;
+            box-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
+        }
+        .copy-input-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+        .copy-input-btn:hover {
+            background: linear-gradient(135deg, #f57c00, #ef6c00);
+            transform: scale(1.05);
+        }
+        .copy-input-btn.copied {
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+        }
+        .slide-number { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(13, 71, 161, 0.8); color: white; padding: 10px 25px; border-radius: 25px; font-size: 14px; font-weight: 600; z-index: 9000; }
+        .footer-info { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0; color: #666; font-size: 14px; }
+        @media (max-width: 768px) { .content-card { padding: 25px; } h1 { font-size: 28px; } h2 { font-size: 22px; } .resource-grid { grid-template-columns: 1fr; } .nav-arrow { width: 45px; height: 45px; font-size: 18px; } .prev-arrow { left: 10px; } .next-arrow { right: 10px; } }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <span class="nav-title">4-2 太空探測主題實作</span>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-btn">首頁</a>
+            <a href="Part4-1_教學目標與課程設計.html" class="nav-btn">上一章</a>
+            <a href="Part4-3_海洋觀測主題實作.html" class="nav-btn">下一章</a>
+            <button class="nav-btn fullscreen-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="nav-btn">YT</a>
+        </div>
+    </nav>
+    <button class="nav-arrow prev-arrow" onclick="prevSlide()">◀</button>
+    <button class="nav-arrow next-arrow" onclick="nextSlide()">▶</button>
+
+    <div class="slide-container">
+        <!-- Slide 1 -->
+        <div class="slide active">
+            <div class="content-card" style="text-align: center;">
+                <h1>太空探測主題實作</h1>
+                <p style="font-size: 22px; color: #666; margin-bottom: 30px;">Space Exploration Teaching Practice</p>
+                <div class="resource-grid">
+                    <div class="resource-card"><h4>火星任務</h4><p>規劃人類登陸火星的探測計畫</p></div>
+                    <div class="resource-card"><h4>衛星科技</h4><p>認識人造衛星與太空科技應用</p></div>
+                    <div class="resource-card"><h4>太陽系探索</h4><p>認識八大行星與太陽系結構</p></div>
+                </div>
+                <p style="margin-top: 20px;">完整的太空主題教學資源生成實作</p>
+                <div class="footer-info">© 2026 阿亮老師 | 提示詞工程實戰教學</div>
+            </div>
+        </div>
+
+        <!-- Slide 2 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>太空探測：教案生成</h2>
+                <div class="example-box">
+                    <h4>完整教案提示詞</h4>
+                    <pre>你是一位資深的國小自然科教師，擅長設計引人入勝的科學課程。
+
+請設計「太空探測：火星任務」單元教案：
+
+【基本資訊】
+年級：國小五年級
+節數：4 節（每節 40 分鐘）
+對應課綱：認識太陽系、了解太空探索
+
+【情境設定】
+學生扮演「太空總署新進科學家」，任務是規劃人類首次火星探測計畫。
+
+請提供完整教案，包含：
+1. 單元目標（認知/情意/技能各 2 條）
+2. 各節課流程表（時間/活動/教具）
+3. 引起動機的具體話術
+4. 學生任務說明
+5. 差異化教學策略
+6. 評量方式與評分標準
+
+請讓內容生動有趣，適合國小學生。</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>太空探測：學習單生成</h2>
+                <div class="example-box">
+                    <h4>太陽系學習單</h4>
+                    <pre>請設計「認識太陽系」學習單：
+
+年級：國小五年級
+時間：20 分鐘
+
+學習單內容：
+1. 太陽系圖示填空（八大行星名稱和順序）
+2. 行星特徵配對題（5 題）
+3. 類地行星 vs 類木行星比較表
+4. 思考題：如果你是太空人，你最想去哪個行星探險？為什麼？
+
+請設計三個版本：
+- 基礎版（較多提示）
+- 標準版
+- 挑戰版（加入延伸問題）
+
+格式要清楚，適合列印使用。</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>太空探測：知識講解內容</h2>
+                <div class="example-box">
+                    <h4>火星知識整理</h4>
+                    <pre>請整理「火星」的科普知識，供國小五年級教學使用：
+
+請提供：
+1. 火星基本資料卡
+   - 大小、距離、公轉週期
+   - 與地球的比較
+
+2. 火星的特色（用學生能理解的語言）
+   - 為什麼叫紅色星球？
+   - 火星上有水嗎？
+   - 一天有多長？
+
+3. 人類的火星探測歷史
+   - 重要的探測任務（3-4 個）
+   - 有趣的發現
+
+4. 火星探測的挑戰
+   - 距離問題
+   - 環境挑戰
+
+5. 教師補充知識
+   - 學生可能的提問和回答
+
+請避免太專業的術語，用生活化的比喻說明。</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>太空探測：簡報內容</h2>
+                <div class="example-box">
+                    <h4>教學簡報大綱</h4>
+                    <pre>請設計「火星探測任務」教學簡報大綱：
+
+簡報用途：國小五年級自然課
+總頁數：約 15 頁
+風格：活潑有趣、圖文並茂
+
+簡報架構：
+1. 封面（任務名稱、神秘感）
+2. 情境導入（你是太空科學家）
+3-5. 認識火星（基本資料、特色、環境）
+6-8. 人類的火星探測（歷史、現在、未來）
+9-10. 火星任務挑戰（學生思考）
+11-13. 我們的火星計畫（引導活動）
+14. 總結與反思
+15. 延伸學習資源
+
+每頁請提供：
+- 標題
+- 主要內容要點（3-5 點）
+- 建議的視覺元素
+- 教師說明備註</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>太空探測：圖像素材</h2>
+                <div class="example-box">
+                    <h4>教學圖像提示詞組</h4>
+                    <pre>【太陽系教學圖】
+Educational diagram of the solar system,
+showing 8 planets orbiting the sun,
+clear labels, kid-friendly cartoon style,
+accurate relative sizes, colorful,
+white background, suitable for textbook
+
+【火星探測車】
+Cute cartoon Mars rover exploring red planet surface,
+friendly robot design with big camera eyes,
+rocky Martian landscape, Earth in sky,
+educational illustration style, warm colors
+
+【太空人插圖】
+Friendly astronaut floating in space,
+waving hand, detailed spacesuit,
+Earth and stars in background,
+cartoon style for children,
+inspiring and adventurous mood
+
+【火箭發射】
+Colorful rocket launching into blue sky,
+flames and smoke at base,
+excited crowd watching below,
+Pixar style 3D render,
+inspiring educational poster style</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>太空探測：評量設計</h2>
+                <div class="example-box">
+                    <h4>單元評量題目</h4>
+                    <pre>請為「太空探測：火星任務」單元設計評量：
+
+一、選擇題（10 題）
+- 5 題基礎記憶
+- 3 題理解應用
+- 2 題分析比較
+附答案和解析
+
+二、簡答題（3 題）
+- 考核理解和表達能力
+- 附評分標準
+
+三、實作評量
+- 設計「火星探測計畫書」
+- 評分規準（Rubric）
+  - 內容完整性
+  - 科學正確性
+  - 創意表現
+  - 表達清晰度
+
+四、學生自評表
+- 我學到了什麼
+- 我最感興趣的部分
+- 我還想知道什麼</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>太空探測：活動設計</h2>
+                <div class="example-box">
+                    <h4>實作活動設計</h4>
+                    <pre>請設計「設計火星基地」實作活動：
+
+活動時間：30 分鐘
+參與方式：4 人小組
+
+活動說明：
+1. 任務背景說明
+   - 你們是火星殖民計畫的建築師
+   - 要設計一個能讓 10 人生活的火星基地
+
+2. 設計要求
+   - 必須解決的問題：氧氣、水、食物、居住
+   - 可使用的材料提示
+
+3. 分組任務分配
+   - 設計師：畫設計圖
+   - 工程師：考慮建造可行性
+   - 科學家：解決生存問題
+   - 報告員：準備發表
+
+4. 成果發表方式
+   - 每組 3 分鐘報告
+   - 其他組提問
+
+5. 評分標準
+   - 創意性
+   - 實用性
+   - 團隊合作
+   - 發表表現</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: 實作練習 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>綜合實作練習</h2>
+                <div class="practice-box">
+                    <h4>挑戰：完整備課套件</h4>
+                    <p>選擇以下主題之一，使用本節學到的提示詞模板，生成完整的備課套件：</p>
+                    <ul>
+                        <li>人造衛星與太空科技</li>
+                        <li>月球探測任務</li>
+                        <li>太空站生活</li>
+                    </ul>
+                    <p>備課套件應包含：</p>
+                    <ol>
+                        <li>教案（至少 2 節課）</li>
+                        <li>學習單（差異化設計）</li>
+                        <li>簡報大綱</li>
+                        <li>圖像提示詞</li>
+                        <li>評量設計</li>
+                    </ol>
+                    <div class="input-wrapper">
+                        <textarea class="practice-input" id="practice1" placeholder="在這裡寫下你的提示詞..."></textarea>
+                        <button class="copy-input-btn" onclick="copyInput('practice1')">複製</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: 總結 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>本節重點回顧</h2>
+                <div class="resource-grid">
+                    <div class="resource-card"><h4>教案生成</h4><p>情境式教案設計提示詞</p></div>
+                    <div class="resource-card"><h4>學習單設計</h4><p>差異化學習單模板</p></div>
+                    <div class="resource-card"><h4>知識整理</h4><p>科普內容組織提示詞</p></div>
+                    <div class="resource-card"><h4>視覺素材</h4><p>教學圖像提示詞組</p></div>
+                </div>
+                <div class="highlight-box" style="margin-top: 30px;">
+                    <h4>下一節預告</h4>
+                    <p>在 4-3 節中，我們將進行<strong>海洋觀測主題</strong>的完整備課實作！</p>
+                </div>
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="Part4-3_海洋觀測主題實作.html" class="nav-btn" style="display: inline-block; background: linear-gradient(135deg, #006064, #00838f); border: none; padding: 15px 40px; font-size: 18px;">前往下一節 →</a>
+                </div>
+                <div class="footer-info">© 2026 阿亮老師 | 提示詞工程實戰教學</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide-number"><span id="currentSlide">1</span> / <span id="totalSlides">10</span></div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        document.getElementById('totalSlides').textContent = totalSlides;
+        function showSlide(index) { slides.forEach((slide, i) => { slide.classList.remove('active'); if (i === index) slide.classList.add('active'); }); document.getElementById('currentSlide').textContent = index + 1; document.querySelector('.prev-arrow').disabled = index === 0; document.querySelector('.next-arrow').disabled = index === totalSlides - 1; }
+        function nextSlide() { if (currentSlide < totalSlides - 1) { currentSlide++; showSlide(currentSlide); } }
+        function prevSlide() { if (currentSlide > 0) { currentSlide--; showSlide(currentSlide); } }
+        function copyTemplate(btn) { const pre = btn.previousElementSibling; navigator.clipboard.writeText(pre.textContent).then(() => { btn.textContent = '已複製！'; setTimeout(() => btn.textContent = '複製模板', 2000); }); }
+        document.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' || e.key === ' ') nextSlide(); else if (e.key === 'ArrowLeft') prevSlide(); });
+        showSlide(0);
+
+        // 全螢幕切換
+        function toggleFullscreen() {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                btn.textContent = '離開全螢幕';
+            } else {
+                document.exitFullscreen();
+                btn.textContent = '全螢幕';
+            }
+        }
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) btn.textContent = '全螢幕';
+        });
+
+        // 複製練習輸入框內容
+        function copyInput(id) {
+            const textarea = document.getElementById(id);
+            const btn = textarea.parentElement.querySelector('.copy-input-btn');
+            if (textarea.value.trim() === '') {
+                alert('請先輸入內容再複製！');
+                return;
+            }
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                btn.textContent = '已複製！';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = '複製';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

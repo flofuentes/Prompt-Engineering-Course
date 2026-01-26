@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5-1 專案規劃與架構 - 提示詞工程實戰教學</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif; background: linear-gradient(135deg, #4a148c 0%, #7b1fa2 50%, #9c27b0 100%); min-height: 100vh; overflow: hidden; color: #333; }
+        .nav-bar { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: rgba(74, 20, 140, 0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.15); display: flex; justify-content: space-between; align-items: center; padding: 0 30px; z-index: 10000; }
+        .nav-title { font-size: 20px; font-weight: 700; background: linear-gradient(90deg, #ce93d8, #ba68c8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-buttons { display: flex; gap: 12px; }
+        .nav-btn { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 8px 18px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 600; text-decoration: none; transition: all 0.3s ease; }
+        .nav-btn:hover { background: rgba(206, 147, 216, 0.3); }
+        .nav-arrow { position: fixed; top: 50%; transform: translateY(-50%); background: rgba(74, 20, 140, 0.8); color: white; width: 60px; height: 60px; border-radius: 50%; border: 2px solid rgba(206, 147, 216, 0.5); font-size: 24px; cursor: pointer; z-index: 9000; transition: all 0.3s; display: flex; align-items: center; justify-content: center; }
+        .nav-arrow:hover { background: rgba(123, 31, 162, 0.9); transform: translateY(-50%) scale(1.1); }
+        .prev-arrow { left: 30px; } .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+        .slide-container { width: 100%; height: 100vh; padding-top: 60px; position: relative; z-index: 1; }
+        .slide { position: absolute; top: 60px; left: 0; width: 100%; height: calc(100vh - 60px); display: none; align-items: center; justify-content: center; padding: 40px; opacity: 0; transition: opacity 0.4s ease; z-index: 10; }
+        .slide.active { display: flex; opacity: 1; z-index: 20; }
+        .content-card { background: rgba(255, 255, 255, 0.97); border-radius: 24px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); padding: 40px 50px; max-width: 1350px; width: 95%; max-height: 85vh; overflow-y: auto; }
+        h1 { font-size: 42px; margin-bottom: 20px; text-align: center; background: linear-gradient(135deg, #7b1fa2, #e040fb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { color: #7b1fa2; font-size: 30px; margin-bottom: 25px; border-bottom: 4px solid; border-image: linear-gradient(90deg, #7b1fa2, #e040fb) 1; padding-bottom: 12px; }
+        h3 { color: #9c27b0; font-size: 22px; margin: 20px 0 12px 0; }
+        h4 { color: #ab47bc; font-size: 18px; margin: 15px 0 8px 0; }
+        p, li { font-size: 17px; line-height: 1.8; color: #444; margin-bottom: 10px; }
+        ul, ol { margin-left: 25px; margin-bottom: 15px; }
+        pre { background: linear-gradient(135deg, #4a148c, #7b1fa2); color: #ce93d8; padding: 20px 25px; border-radius: 14px; overflow-x: auto; margin: 20px 0; font-size: 14px; line-height: 1.6; font-family: 'Consolas', monospace; border: 1px solid rgba(206, 147, 216, 0.3); white-space: pre-wrap; }
+        .highlight-box { background: linear-gradient(135deg, rgba(123, 31, 162, 0.08), rgba(224, 64, 251, 0.08)); border-left: 5px solid #7b1fa2; padding: 20px 25px; border-radius: 0 15px 15px 0; margin: 20px 0; }
+        .highlight-box h4 { color: #7b1fa2; margin-top: 0; }
+        .example-box { background: #f5f5f5; padding: 20px; border-radius: 12px; margin: 15px 0; border: 1px solid #e0e0e0; }
+        .example-box h4 { color: #7b1fa2; margin-top: 0; margin-bottom: 10px; }
+        .copy-btn { background: linear-gradient(135deg, #7b1fa2, #ab47bc); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; margin-top: 10px; transition: all 0.3s; }
+        .copy-btn:hover { transform: scale(1.05); }
+        .tech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0; }
+        .tech-card { background: linear-gradient(135deg, #f3e5f5, #e1bee7); padding: 20px; border-radius: 15px; }
+        .tech-card h4 { color: #7b1fa2; margin-top: 0; }
+        .arch-flow { display: flex; justify-content: center; align-items: center; gap: 15px; margin: 20px 0; flex-wrap: wrap; }
+        .arch-box { background: linear-gradient(135deg, #7b1fa2, #9c27b0); color: white; padding: 15px 25px; border-radius: 10px; text-align: center; }
+        .arch-box h5 { margin-bottom: 5px; }
+        .arch-box p { font-size: 12px; margin: 0; opacity: 0.9; }
+        .arrow { font-size: 24px; color: #7b1fa2; }
+        .practice-box { background: linear-gradient(135deg, #fff3e0, #ffe0b2); border: 2px dashed #ff9800; padding: 25px; border-radius: 15px; margin: 20px 0; }
+        .practice-box h4 { color: #e65100; margin-top: 0; }
+        .input-wrapper {
+            position: relative;
+            margin-top: 10px;
+        }
+        .practice-input {
+            width: 100%;
+            min-height: 80px;
+            padding: 15px;
+            padding-right: 70px;
+            border: 2px dashed #ff9800;
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            resize: vertical;
+            background: #fff;
+        }
+        .practice-input:focus {
+            outline: none;
+            border-color: #f57c00;
+            box-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
+        }
+        .copy-input-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+        .copy-input-btn:hover {
+            background: linear-gradient(135deg, #f57c00, #ef6c00);
+            transform: scale(1.05);
+        }
+        .copy-input-btn.copied {
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+        }
+        .slide-number { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(74, 20, 140, 0.8); color: white; padding: 10px 25px; border-radius: 25px; font-size: 14px; font-weight: 600; z-index: 9000; }
+        .footer-info { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0; color: #666; font-size: 14px; }
+        @media (max-width: 768px) { .content-card { padding: 25px; } h1 { font-size: 28px; } h2 { font-size: 22px; } .tech-grid { grid-template-columns: 1fr; } .arch-flow { flex-direction: column; } .arrow { transform: rotate(90deg); } .nav-arrow { width: 45px; height: 45px; font-size: 18px; } .prev-arrow { left: 10px; } .next-arrow { right: 10px; } }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <span class="nav-title">5-1 專案規劃與架構</span>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-btn">首頁</a>
+            <a href="Part4-3_海洋觀測主題實作.html" class="nav-btn">Part 4</a>
+            <a href="Part5-2_手勢追蹤實作.html" class="nav-btn">下一章</a>
+            <button class="nav-btn fullscreen-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="nav-btn">YT</a>
+        </div>
+    </nav>
+    <button class="nav-arrow prev-arrow" onclick="prevSlide()">◀</button>
+    <button class="nav-arrow next-arrow" onclick="nextSlide()">▶</button>
+
+    <div class="slide-container">
+        <!-- Slide 1 -->
+        <div class="slide active">
+            <div class="content-card" style="text-align: center;">
+                <h1>星海粒子互動專案</h1>
+                <p style="font-size: 22px; color: #666; margin-bottom: 20px;">AI-Assisted Interactive Project Development</p>
+
+                <div style="margin: 25px 0; padding: 20px; background: linear-gradient(135deg, rgba(123, 31, 162, 0.2), rgba(171, 71, 188, 0.1)); border-radius: 15px; border: 2px solid #ab47bc;">
+                    <h4 style="color: #9c27b0; margin-bottom: 10px;">先來體驗一下！</h4>
+                    <a href="https://neonflux.eugene.tw" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #7b1fa2, #ab47bc); color: white; padding: 15px 40px; border-radius: 30px; text-decoration: none; font-size: 18px; font-weight: bold; transition: all 0.3s; box-shadow: 0 5px 20px rgba(123, 31, 162, 0.4);">
+                        開啟 Demo 體驗 →
+                    </a>
+                    <p style="margin-top: 10px; font-size: 14px; color: #666;">點擊連結，用手勢控制粒子！</p>
+                </div>
+
+                <div class="arch-flow">
+                    <div class="arch-box"><h5>攝影機</h5><p>捕捉手勢</p></div>
+                    <span class="arrow">→</span>
+                    <div class="arch-box"><h5>MediaPipe</h5><p>手部追蹤</p></div>
+                    <span class="arrow">→</span>
+                    <div class="arch-box"><h5>座標處理</h5><p>位置計算</p></div>
+                    <span class="arrow">→</span>
+                    <div class="arch-box"><h5>粒子系統</h5><p>視覺呈現</p></div>
+                </div>
+                <p style="margin-top: 15px;">用 AI 協助開發一個手勢控制的粒子互動系統</p>
+                <div class="footer-info">© 2026 阿亮老師 | 提示詞工程實戰教學</div>
+            </div>
+        </div>
+
+        <!-- Slide 2 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>專案介紹</h2>
+                <div class="highlight-box">
+                    <h4>星海粒子互動系統</h4>
+                    <p>一個結合「太空星塵」和「深海微光」主題的互動視覺專案。使用者透過手勢控制畫面上的數千顆粒子，創造出如星空或深海般的夢幻視覺效果。</p>
+                </div>
+                <h3>專案特色</h3>
+                <div class="tech-grid">
+                    <div class="tech-card"><h4>手勢互動</h4><p>使用 MediaPipe Hands API 追蹤手部動作，無需額外硬體</p></div>
+                    <div class="tech-card"><h4>粒子視覺</h4><p>20,000+ 粒子即時渲染，流暢的視覺效果</p></div>
+                    <div class="tech-card"><h4>主題切換</h4><p>太空星塵 / 深海微光 兩種主題風格</p></div>
+                    <div class="tech-card"><h4>純前端</h4><p>HTML + CSS + JavaScript，無需後端伺服器</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>技術選型</h2>
+                <div class="tech-grid">
+                    <div class="tech-card">
+                        <h4>MediaPipe Hands</h4>
+                        <p><strong>用途</strong>：手部追蹤<br><strong>特點</strong>：Google 開源、瀏覽器端運行、21 個關鍵點追蹤<br><strong>優勢</strong>：免費、效能好、易於整合</p>
+                    </div>
+                    <div class="tech-card">
+                        <h4>Canvas 2D API</h4>
+                        <p><strong>用途</strong>：粒子渲染<br><strong>特點</strong>：原生 JavaScript、即時繪圖<br><strong>優勢</strong>：學習曲線低、相容性好</p>
+                    </div>
+                    <div class="tech-card">
+                        <h4>requestAnimationFrame</h4>
+                        <p><strong>用途</strong>：動畫循環<br><strong>特點</strong>：瀏覽器優化的動畫 API<br><strong>優勢</strong>：效能好、自動適應螢幕更新率</p>
+                    </div>
+                </div>
+                <div class="highlight-box">
+                    <h4>為什麼選這些技術？</h4>
+                    <p>這個技術組合讓專案可以在任何現代瀏覽器中運行，不需要安裝任何軟體，適合教學展示和學生練習。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>用 AI 規劃專案架構</h2>
+                <div class="example-box">
+                    <h4>專案規劃提示詞</h4>
+                    <pre>我想開發一個手勢控制的粒子互動網頁專案。
+
+專案需求：
+1. 使用 MediaPipe Hands 追蹤手部位置
+2. 建立可容納 20,000 顆粒子的粒子系統
+3. 手指位置會吸引/排斥周圍粒子
+4. 支援「太空星塵」和「深海微光」兩種主題
+5. 純前端，單一 HTML 檔案
+
+請協助我：
+1. 設計專案架構
+   - 主要模組劃分
+   - 各模組的職責
+   - 模組間的資料流
+
+2. 規劃開發步驟
+   - 建議的開發順序
+   - 每個階段的目標
+
+3. 技術細節建議
+   - MediaPipe 初始化配置
+   - 粒子資料結構設計
+   - 效能優化策略</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>專案架構設計</h2>
+                <h3>模組劃分</h3>
+                <pre>
+星海粒子互動專案
+├── 1. HTML 結構
+│   ├── video（攝影機畫面，隱藏）
+│   ├── canvas（粒子渲染）
+│   └── 控制面板（主題切換、參數調整）
+│
+├── 2. 全域變數與設定
+│   ├── 粒子陣列
+│   ├── 手部座標
+│   └── 主題配色
+│
+├── 3. 初始化模組
+│   ├── 初始化 Canvas
+│   ├── 初始化 MediaPipe
+│   └── 初始化粒子
+│
+├── 4. 手勢追蹤模組
+│   ├── 攝影機存取
+│   ├── 手部偵測回呼
+│   └── 座標轉換
+│
+├── 5. 粒子系統模組
+│   ├── 粒子物理更新
+│   ├── 手部互動計算
+│   └── 邊界處理
+│
+└── 6. 渲染模組
+    ├── 清除畫面
+    ├── 繪製粒子
+    └── 動畫循環
+                </pre>
+            </div>
+        </div>
+
+        <!-- Slide 6 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>開發步驟規劃</h2>
+                <div class="tech-grid">
+                    <div class="tech-card">
+                        <h4>Step 1：基礎架構</h4>
+                        <p>建立 HTML 結構、CSS 樣式、基本的 Canvas 設定</p>
+                    </div>
+                    <div class="tech-card">
+                        <h4>Step 2：粒子系統</h4>
+                        <p>實作粒子生成、物理更新、基本繪製</p>
+                    </div>
+                    <div class="tech-card">
+                        <h4>Step 3：手勢追蹤</h4>
+                        <p>整合 MediaPipe、處理座標轉換</p>
+                    </div>
+                    <div class="tech-card">
+                        <h4>Step 4：互動整合</h4>
+                        <p>粒子對手部位置的反應邏輯</p>
+                    </div>
+                    <div class="tech-card">
+                        <h4>Step 5：主題系統</h4>
+                        <p>實作太空/海洋主題切換</p>
+                    </div>
+                    <div class="tech-card">
+                        <h4>Step 6：優化美化</h4>
+                        <p>效能優化、UI 改善、功能擴充</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>用 AI 生成基礎程式碼</h2>
+                <div class="example-box">
+                    <h4>程式碼生成提示詞</h4>
+                    <pre>請幫我建立星海粒子互動專案的基礎 HTML 結構。
+
+要求：
+1. 單一 HTML 檔案，包含 CSS 和 JavaScript
+2. HTML 結構：
+   - 隱藏的 video 元素（用於攝影機）
+   - 全螢幕 canvas 元素
+   - 控制面板（主題切換按鈕、粒子數量滑桿）
+
+3. CSS 樣式：
+   - 深色背景
+   - canvas 全螢幕
+   - 控制面板固定在右上角，半透明背景
+
+4. JavaScript 基礎結構：
+   - 全域變數宣告（particles, handPosition, currentTheme）
+   - 主題配色定義（太空：藍紫色系，海洋：青藍色系）
+   - 初始化函數框架
+   - 動畫循環框架
+
+請生成完整的基礎程式碼，加上詳細註解說明每個部分的用途。</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>AI 輔助開發技巧</h2>
+                <div class="highlight-box">
+                    <h4>有效的程式碼生成策略</h4>
+                    <p>將大專案拆成小模組，一次只請 AI 生成一個功能，確保每個部分都能正常運作後再整合。</p>
+                </div>
+                <h3>分步驟請求範例</h3>
+                <ul>
+                    <li><strong>第一步</strong>：「請生成粒子初始化的程式碼，產生 20000 顆粒子，每顆有 x, y, vx, vy, color, size 屬性」</li>
+                    <li><strong>第二步</strong>：「請生成粒子物理更新的函數，包含速度衰減和邊界反彈」</li>
+                    <li><strong>第三步</strong>：「請生成 Canvas 繪製粒子的函數」</li>
+                    <li><strong>第四步</strong>：「請生成 MediaPipe Hands 的初始化和回呼處理程式碼」</li>
+                </ul>
+                <div class="tech-grid">
+                    <div class="tech-card">
+                        <h4>Debug 協助</h4>
+                        <p>「這段程式碼出現錯誤 [錯誤訊息]，請幫我找出問題並修正」</p>
+                    </div>
+                    <div class="tech-card">
+                        <h4>效能優化</h4>
+                        <p>「這個粒子更新函數效能不佳，請幫我優化」</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: 安裝與執行 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>專案安裝與執行</h2>
+                <div class="highlight-box">
+                    <h4>取得專案程式碼</h4>
+                    <p>從 GitHub 複製專案到本地電腦</p>
+                </div>
+
+                <div class="step-container">
+                    <div class="step-item">
+                        <span class="step-num">1</span>
+                        <div class="step-content">
+                            <h4>複製專案</h4>
+                            <p>將 <code>&lt;your-username&gt;</code> 替換為實際帳號：</p>
+                            <pre style="background: #1e1e3f; color: #e0e0e0; padding: 15px; border-radius: 8px; overflow-x: auto;">git clone https://github.com/&lt;your-username&gt;/NeonFlux.git
+cd NeonFlux</pre>
+                        </div>
+                    </div>
+
+                    <div class="step-item">
+                        <span class="step-num">2</span>
+                        <div class="step-content">
+                            <h4>啟動本地伺服器</h4>
+                            <p>使用 Python 3 啟動：</p>
+                            <pre style="background: #1e1e3f; color: #e0e0e0; padding: 15px; border-radius: 8px; overflow-x: auto;"># 使用 Python 3
+python3 -m http.server 8000</pre>
+                        </div>
+                    </div>
+
+                    <div class="step-item">
+                        <span class="step-num">3</span>
+                        <div class="step-content">
+                            <h4>開啟瀏覽器</h4>
+                            <p>訪問以下網址：</p>
+                            <pre style="background: #1e1e3f; color: #e0e0e0; padding: 15px; border-radius: 8px;">http://localhost:8000</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tech-card" style="margin-top: 20px; background: rgba(255, 152, 0, 0.1); border-left: 4px solid #ff9800;">
+                    <h4 style="color: #f57c00;">注意事項</h4>
+                    <ul style="margin-top: 10px;">
+                        <li>需要 HTTPS 或 localhost 環境才能存取攝影機</li>
+                        <li>確保瀏覽器有攝影機存取權限</li>
+                        <li>建議使用 Chrome 或 Edge 瀏覽器</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>實作練習</h2>
+                <div class="practice-box">
+                    <h4>練習：規劃你的互動專案</h4>
+                    <p>使用本節學到的提示詞技巧，規劃一個簡化版的互動專案。</p>
+                    <p>你可以選擇：</p>
+                    <ul>
+                        <li>滑鼠控制的粒子系統（不使用手勢追蹤）</li>
+                        <li>星空背景動畫（只有粒子，沒有互動）</li>
+                        <li>簡單的手勢偵測展示</li>
+                    </ul>
+                    <p>使用 AI 協助你：</p>
+                    <ol>
+                        <li>設計專案架構</li>
+                        <li>規劃開發步驟</li>
+                        <li>生成基礎程式碼</li>
+                    </ol>
+                    <div class="input-wrapper">
+                        <textarea class="practice-input" id="practice1" placeholder="在這裡寫下你的提示詞..."></textarea>
+                        <button class="copy-input-btn" onclick="copyInput('practice1')">複製</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>本節重點回顧</h2>
+                <div class="tech-grid">
+                    <div class="tech-card"><h4>專案介紹</h4><p>星海粒子互動系統的功能和特色</p></div>
+                    <div class="tech-card"><h4>技術選型</h4><p>MediaPipe、Canvas 2D、單檔架構</p></div>
+                    <div class="tech-card"><h4>架構設計</h4><p>模組劃分和資料流規劃</p></div>
+                    <div class="tech-card"><h4>AI 輔助</h4><p>分步驟請求、Debug 協助</p></div>
+                </div>
+                <div class="highlight-box" style="margin-top: 30px;">
+                    <h4>下一節預告</h4>
+                    <p>在 5-2 節中，我們將實作<strong>手勢追蹤</strong>功能，學習如何使用 MediaPipe 取得手部座標！</p>
+                </div>
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="Part5-2_手勢追蹤實作.html" class="nav-btn" style="display: inline-block; background: linear-gradient(135deg, #7b1fa2, #ab47bc); border: none; padding: 15px 40px; font-size: 18px;">前往下一節 →</a>
+                </div>
+                <div class="footer-info">© 2026 阿亮老師 | 提示詞工程實戰教學</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide-number"><span id="currentSlide">1</span> / <span id="totalSlides">11</span></div>
+
+    <script>
+        let currentSlide = 0; const slides = document.querySelectorAll('.slide'); const totalSlides = slides.length;
+        document.getElementById('totalSlides').textContent = totalSlides;
+        function showSlide(index) { slides.forEach((slide, i) => { slide.classList.remove('active'); if (i === index) slide.classList.add('active'); }); document.getElementById('currentSlide').textContent = index + 1; document.querySelector('.prev-arrow').disabled = index === 0; document.querySelector('.next-arrow').disabled = index === totalSlides - 1; }
+        function nextSlide() { if (currentSlide < totalSlides - 1) { currentSlide++; showSlide(currentSlide); } }
+        function prevSlide() { if (currentSlide > 0) { currentSlide--; showSlide(currentSlide); } }
+        function copyTemplate(btn) { const pre = btn.previousElementSibling; navigator.clipboard.writeText(pre.textContent).then(() => { btn.textContent = '已複製！'; setTimeout(() => btn.textContent = '複製模板', 2000); }); }
+        document.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' || e.key === ' ') nextSlide(); else if (e.key === 'ArrowLeft') prevSlide(); });
+        showSlide(0);
+
+        // 全螢幕功能
+        function toggleFullscreen() {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                btn.textContent = '離開全螢幕';
+            } else {
+                document.exitFullscreen();
+                btn.textContent = '全螢幕';
+            }
+        }
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) btn.textContent = '全螢幕';
+        });
+
+        // 複製練習輸入框內容
+        function copyInput(id) {
+            const textarea = document.getElementById(id);
+            const btn = textarea.parentElement.querySelector('.copy-input-btn');
+            if (textarea.value.trim() === '') {
+                alert('請先輸入內容再複製！');
+                return;
+            }
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                btn.textContent = '已複製！';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = '複製';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

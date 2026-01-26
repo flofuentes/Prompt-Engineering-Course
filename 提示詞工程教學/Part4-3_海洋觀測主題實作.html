@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4-3 海洋觀測主題實作 - 提示詞工程實戰教學</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif; background: linear-gradient(135deg, #006064 0%, #00838f 50%, #00acc1 100%); min-height: 100vh; overflow: hidden; color: #333; }
+        .nav-bar { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: rgba(0, 96, 100, 0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.15); display: flex; justify-content: space-between; align-items: center; padding: 0 30px; z-index: 10000; }
+        .nav-title { font-size: 20px; font-weight: 700; background: linear-gradient(90deg, #80deea, #4dd0e1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-buttons { display: flex; gap: 12px; }
+        .nav-btn { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 8px 18px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 600; text-decoration: none; transition: all 0.3s ease; }
+        .nav-btn:hover { background: rgba(128, 222, 234, 0.3); }
+        .nav-arrow { position: fixed; top: 50%; transform: translateY(-50%); background: rgba(0, 96, 100, 0.8); color: white; width: 60px; height: 60px; border-radius: 50%; border: 2px solid rgba(128, 222, 234, 0.5); font-size: 24px; cursor: pointer; z-index: 9000; transition: all 0.3s; display: flex; align-items: center; justify-content: center; }
+        .nav-arrow:hover { background: rgba(0, 131, 143, 0.9); transform: translateY(-50%) scale(1.1); }
+        .prev-arrow { left: 30px; } .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+        .slide-container { width: 100%; height: 100vh; padding-top: 60px; position: relative; z-index: 1; }
+        .slide { position: absolute; top: 60px; left: 0; width: 100%; height: calc(100vh - 60px); display: none; align-items: center; justify-content: center; padding: 40px; opacity: 0; transition: opacity 0.4s ease; z-index: 10; }
+        .slide.active { display: flex; opacity: 1; z-index: 20; }
+        .content-card { background: rgba(255, 255, 255, 0.97); border-radius: 24px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); padding: 40px 50px; max-width: 1350px; width: 95%; max-height: 85vh; overflow-y: auto; }
+        h1 { font-size: 42px; margin-bottom: 20px; text-align: center; background: linear-gradient(135deg, #006064, #26c6da); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { color: #006064; font-size: 30px; margin-bottom: 25px; border-bottom: 4px solid; border-image: linear-gradient(90deg, #006064, #26c6da) 1; padding-bottom: 12px; }
+        h3 { color: #00838f; font-size: 22px; margin: 20px 0 12px 0; }
+        h4 { color: #00acc1; font-size: 18px; margin: 15px 0 8px 0; }
+        p, li { font-size: 17px; line-height: 1.8; color: #444; margin-bottom: 10px; }
+        ul, ol { margin-left: 25px; margin-bottom: 15px; }
+        pre { background: linear-gradient(135deg, #006064, #00838f); color: #80deea; padding: 20px 25px; border-radius: 14px; overflow-x: auto; margin: 20px 0; font-size: 14px; line-height: 1.6; font-family: 'Consolas', monospace; border: 1px solid rgba(128, 222, 234, 0.3); white-space: pre-wrap; }
+        .highlight-box { background: linear-gradient(135deg, rgba(0, 96, 100, 0.08), rgba(38, 198, 218, 0.08)); border-left: 5px solid #006064; padding: 20px 25px; border-radius: 0 15px 15px 0; margin: 20px 0; }
+        .highlight-box h4 { color: #006064; margin-top: 0; }
+        .example-box { background: #f5f5f5; padding: 20px; border-radius: 12px; margin: 15px 0; border: 1px solid #e0e0e0; }
+        .example-box h4 { color: #006064; margin-top: 0; margin-bottom: 10px; }
+        .copy-btn { background: linear-gradient(135deg, #006064, #00acc1); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; margin-top: 10px; transition: all 0.3s; }
+        .copy-btn:hover { transform: scale(1.05); }
+        .resource-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 20px 0; }
+        .resource-card { background: linear-gradient(135deg, #e0f7fa, #b2ebf2); padding: 20px; border-radius: 15px; }
+        .resource-card h4 { color: #006064; margin-top: 0; }
+        .practice-box { background: linear-gradient(135deg, #fff3e0, #ffe0b2); border: 2px dashed #ff9800; padding: 25px; border-radius: 15px; margin: 20px 0; }
+        .practice-box h4 { color: #e65100; margin-top: 0; }
+        .input-wrapper {
+            position: relative;
+            margin-top: 10px;
+        }
+        .practice-input {
+            width: 100%;
+            min-height: 80px;
+            padding: 15px;
+            padding-right: 70px;
+            border: 2px dashed #ff9800;
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            resize: vertical;
+            background: #fff;
+        }
+        .practice-input:focus {
+            outline: none;
+            border-color: #f57c00;
+            box-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
+        }
+        .copy-input-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+        .copy-input-btn:hover {
+            background: linear-gradient(135deg, #f57c00, #ef6c00);
+            transform: scale(1.05);
+        }
+        .copy-input-btn.copied {
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+        }
+        .slide-number { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0, 96, 100, 0.8); color: white; padding: 10px 25px; border-radius: 25px; font-size: 14px; font-weight: 600; z-index: 9000; }
+        .footer-info { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0; color: #666; font-size: 14px; }
+        @media (max-width: 768px) { .content-card { padding: 25px; } h1 { font-size: 28px; } h2 { font-size: 22px; } .resource-grid { grid-template-columns: 1fr; } .nav-arrow { width: 45px; height: 45px; font-size: 18px; } .prev-arrow { left: 10px; } .next-arrow { right: 10px; } }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <span class="nav-title">4-3 海洋觀測主題實作</span>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-btn">首頁</a>
+            <a href="Part4-2_太空探測主題實作.html" class="nav-btn">上一章</a>
+            <a href="Part5-1_專案規劃與架構.html" class="nav-btn">Part 5</a>
+            <button class="nav-btn fullscreen-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="nav-btn">YT</a>
+        </div>
+    </nav>
+    <button class="nav-arrow prev-arrow" onclick="prevSlide()">◀</button>
+    <button class="nav-arrow next-arrow" onclick="nextSlide()">▶</button>
+
+    <div class="slide-container">
+        <!-- Slide 1 -->
+        <div class="slide active">
+            <div class="content-card" style="text-align: center;">
+                <h1>海洋觀測主題實作</h1>
+                <p style="font-size: 22px; color: #666; margin-bottom: 30px;">Ocean Observation Teaching Practice</p>
+                <div class="resource-grid">
+                    <div class="resource-card"><h4>深海探測</h4><p>認識深海環境與探測技術</p></div>
+                    <div class="resource-card"><h4>海洋生態</h4><p>珊瑚礁與海洋食物鏈</p></div>
+                    <div class="resource-card"><h4>海洋保育</h4><p>環境議題與保育行動</p></div>
+                </div>
+                <p style="margin-top: 20px;">完整的海洋主題教學資源生成實作</p>
+                <div class="footer-info">© 2026 阿亮老師 | 提示詞工程實戰教學</div>
+            </div>
+        </div>
+
+        <!-- Slide 2 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>海洋觀測：教案生成</h2>
+                <div class="example-box">
+                    <h4>完整教案提示詞</h4>
+                    <pre>你是一位資深的國小自然科教師，擅長設計環境教育課程。
+
+請設計「海洋觀測：拯救珊瑚礁」單元教案：
+
+【基本資訊】
+年級：國小五年級
+節數：4 節（每節 40 分鐘）
+對應課綱：認識海洋生態、環境保育意識
+
+【情境設定】
+學生扮演「海洋研究所調查員」，任務是調查珊瑚礁白化問題並提出保育方案。
+
+請提供完整教案，包含：
+1. 單元目標（認知/情意/技能各 2 條）
+2. 各節課流程表（時間/活動/教具）
+3. 引起動機的具體話術
+4. 學生任務說明
+5. 議題融入說明（海洋教育、環境教育）
+6. 評量方式與評分標準
+
+請讓內容生動有趣，培養學生的環境關懷意識。</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>海洋觀測：學習單生成</h2>
+                <div class="example-box">
+                    <h4>珊瑚礁生態學習單</h4>
+                    <pre>請設計「認識珊瑚礁生態系」學習單：
+
+年級：國小五年級
+時間：20 分鐘
+
+學習單內容：
+1. 珊瑚礁生物辨識（圖片配對 6 種生物）
+2. 海洋食物鏈排序題
+3. 珊瑚礁的重要性（填空題）
+4. 珊瑚白化原因分析（是非題 5 題）
+5. 思考題：我們可以為海洋做什麼？
+
+請設計三個版本：
+- 基礎版（更多圖示輔助）
+- 標準版
+- 挑戰版（加入數據分析題）
+
+格式要清楚，融入環境保育概念。</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>海洋觀測：知識講解內容</h2>
+                <div class="example-box">
+                    <h4>珊瑚礁知識整理</h4>
+                    <pre>請整理「珊瑚礁生態系」的科普知識，供國小五年級教學使用：
+
+請提供：
+1. 珊瑚基本知識
+   - 珊瑚是動物還是植物？
+   - 珊瑚礁如何形成？
+   - 用學生能懂的比喻說明
+
+2. 珊瑚礁生態系
+   - 為什麼叫「海洋的熱帶雨林」？
+   - 住在珊瑚礁的生物（10 種代表）
+   - 食物鏈關係
+
+3. 珊瑚礁面臨的問題
+   - 珊瑚白化是什麼？
+   - 造成的原因（氣候變遷、污染）
+   - 真實案例
+
+4. 保育行動
+   - 全球的保育努力
+   - 我們可以做的事
+
+5. 教師補充
+   - 常見迷思概念
+   - 延伸討論問題</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>海洋觀測：圖像素材</h2>
+                <div class="example-box">
+                    <h4>教學圖像提示詞組</h4>
+                    <pre>【珊瑚礁生態系】
+Vibrant coral reef ecosystem cross-section,
+showing different zones and marine life,
+educational diagram style, colorful fish,
+sea turtles, clownfish among corals,
+labels for different species,
+suitable for science textbook
+
+【深海探測潛水艇】
+Cute yellow research submarine underwater,
+friendly design with big windows,
+scientists inside looking at deep sea creatures,
+bioluminescent fish and jellyfish around,
+cartoon style for children,
+sense of wonder and discovery
+
+【海洋食物鏈】
+Educational food chain diagram,
+from phytoplankton to large fish,
+clear arrows showing energy flow,
+colorful marine creatures,
+simple infographic style,
+suitable for elementary students
+
+【海洋保育主題】
+Children participating in beach cleanup,
+diverse group working together,
+sea turtles and dolphins in clean ocean,
+hopeful and positive atmosphere,
+cartoon illustration style,
+environmental education poster</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>海洋觀測：活動設計</h2>
+                <div class="example-box">
+                    <h4>海洋保育行動方案設計</h4>
+                    <pre>請設計「設計海洋保育行動方案」實作活動：
+
+活動時間：30 分鐘
+參與方式：4 人小組
+
+活動說明：
+1. 任務背景
+   - 你們是海洋保育組織的成員
+   - 要設計一個讓更多人關心海洋的行動方案
+
+2. 方案要求
+   - 選擇一個海洋議題（塑膠污染/珊瑚白化/過度捕撈）
+   - 設計宣導活動或具體行動
+   - 考慮可行性和影響力
+
+3. 成果形式
+   - 製作一張海報或簡報
+   - 3 分鐘提案報告
+
+4. 評分標準
+   - 議題了解程度
+   - 方案創意性
+   - 可行性評估
+   - 團隊合作
+   - 表達清晰度</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>海洋觀測：評量設計</h2>
+                <div class="example-box">
+                    <h4>單元評量題目</h4>
+                    <pre>請為「海洋觀測：拯救珊瑚礁」單元設計評量：
+
+一、選擇題（10 題）
+- 海洋生態基礎知識 5 題
+- 環境議題理解 3 題
+- 保育行動思考 2 題
+附答案和解析
+
+二、配合題
+- 海洋生物與棲地配對
+- 環境問題與原因配對
+
+三、簡答題（2 題）
+- 為什麼珊瑚礁很重要？
+- 你認為最有效的海洋保育行動是什麼？為什麼？
+
+四、實作評量
+- 「我的海洋保育承諾」
+- 學生寫下 3 件他們願意為海洋做的事
+- 評分重點：具體可行、態度積極
+
+五、情意評量
+- 學習前後態度改變調查
+- 環境關懷意識自評</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>綜合實作練習</h2>
+                <div class="practice-box">
+                    <h4>挑戰：完整海洋備課套件</h4>
+                    <p>選擇以下主題之一，生成完整的備課套件：</p>
+                    <ul>
+                        <li>海洋塑膠污染</li>
+                        <li>深海生物探索</li>
+                        <li>台灣的海洋資源</li>
+                    </ul>
+                    <p>備課套件應包含：</p>
+                    <ol>
+                        <li>情境式教案（2 節課）</li>
+                        <li>差異化學習單</li>
+                        <li>知識內容整理</li>
+                        <li>圖像提示詞</li>
+                        <li>評量與自評表</li>
+                    </ol>
+                    <div class="input-wrapper">
+                        <textarea class="practice-input" id="practice1" placeholder="在這裡寫下你的提示詞..."></textarea>
+                        <button class="copy-input-btn" onclick="copyInput('practice1')">複製</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Part 4 完整回顧</h2>
+                <div class="resource-grid">
+                    <div class="resource-card"><h4>4-1 課程設計</h4><p>五階段備課流程、情境式設計</p></div>
+                    <div class="resource-card"><h4>4-2 太空主題</h4><p>火星任務、太陽系探索</p></div>
+                    <div class="resource-card"><h4>4-3 海洋主題</h4><p>珊瑚礁保育、深海探測</p></div>
+                </div>
+                <div class="highlight-box" style="margin-top: 30px;">
+                    <h4>接下來的課程</h4>
+                    <p>在 Part 5 中，我們將運用 AI 協助開發一個<strong>手勢控制的星海粒子互動專案</strong>！結合太空與海洋主題，創造令人驚艷的視覺效果。</p>
+                </div>
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="Part5-1_專案規劃與架構.html" class="nav-btn" style="display: inline-block; background: linear-gradient(135deg, #4a148c, #7b1fa2); border: none; padding: 15px 40px; font-size: 18px;">前往 Part 5 →</a>
+                </div>
+                <div class="footer-info">© 2026 阿亮老師 | 提示詞工程實戰教學</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide-number"><span id="currentSlide">1</span> / <span id="totalSlides">9</span></div>
+
+    <script>
+        let currentSlide = 0; const slides = document.querySelectorAll('.slide'); const totalSlides = slides.length;
+        document.getElementById('totalSlides').textContent = totalSlides;
+        function showSlide(index) { slides.forEach((slide, i) => { slide.classList.remove('active'); if (i === index) slide.classList.add('active'); }); document.getElementById('currentSlide').textContent = index + 1; document.querySelector('.prev-arrow').disabled = index === 0; document.querySelector('.next-arrow').disabled = index === totalSlides - 1; }
+        function nextSlide() { if (currentSlide < totalSlides - 1) { currentSlide++; showSlide(currentSlide); } }
+        function prevSlide() { if (currentSlide > 0) { currentSlide--; showSlide(currentSlide); } }
+        function copyTemplate(btn) { const pre = btn.previousElementSibling; navigator.clipboard.writeText(pre.textContent).then(() => { btn.textContent = '已複製！'; setTimeout(() => btn.textContent = '複製模板', 2000); }); }
+        document.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' || e.key === ' ') nextSlide(); else if (e.key === 'ArrowLeft') prevSlide(); });
+        showSlide(0);
+
+        // 全螢幕切換
+        function toggleFullscreen() {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                btn.textContent = '離開全螢幕';
+            } else {
+                document.exitFullscreen();
+                btn.textContent = '全螢幕';
+            }
+        }
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) btn.textContent = '全螢幕';
+        });
+
+        // 複製練習輸入框內容
+        function copyInput(id) {
+            const textarea = document.getElementById(id);
+            const btn = textarea.parentElement.querySelector('.copy-input-btn');
+            if (textarea.value.trim() === '') {
+                alert('請先輸入內容再複製！');
+                return;
+            }
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                btn.textContent = '已複製！';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = '複製';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

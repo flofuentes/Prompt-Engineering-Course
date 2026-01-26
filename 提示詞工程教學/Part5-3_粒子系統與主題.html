@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Part 5-3：粒子系統與主題 - 提示詞工程教學</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #ffffff;
+        }
+
+        .nav-header {
+            background: rgba(123, 31, 162, 0.9);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .nav-links a:hover,
+        .nav-links button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-links button {
+            color: white;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: inherit;
+            transition: background 0.3s;
+        }
+
+        .slide-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 100px 2rem 2rem;
+        }
+
+        .slide {
+            display: none;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 3rem;
+            min-height: 70vh;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(156, 39, 176, 0.3);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide-title {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #ce93d8, #ba68c8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .slide-content {
+            font-size: 1.2rem;
+            line-height: 1.8;
+        }
+
+        .code-block {
+            background: #1e1e3f;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            border-left: 4px solid #9c27b0;
+            position: relative;
+        }
+
+        .code-block::before {
+            content: attr(data-lang);
+            position: absolute;
+            top: 0.5rem;
+            right: 1rem;
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .code-block code {
+            color: #e0e0e0;
+            white-space: pre;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 4rem;
+            background: #9c27b0;
+            color: white;
+            border: none;
+            padding: 0.3rem 0.8rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+        }
+
+        .copy-btn:hover {
+            background: #7b1fa2;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(156, 39, 176, 0.2), rgba(186, 104, 200, 0.1));
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid #9c27b0;
+        }
+
+        .theme-card {
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .theme-space {
+            background: linear-gradient(135deg, rgba(25, 25, 112, 0.6), rgba(0, 0, 50, 0.4));
+            border: 2px solid #4169e1;
+        }
+
+        .theme-ocean {
+            background: linear-gradient(135deg, rgba(0, 105, 148, 0.6), rgba(0, 50, 80, 0.4));
+            border: 2px solid #00ced1;
+        }
+
+        .theme-card h4 {
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .color-palette {
+            display: flex;
+            gap: 0.5rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .color-swatch {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: white;
+            text-shadow: 0 0 3px black;
+        }
+
+        .step-card {
+            background: rgba(156, 39, 176, 0.15);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            display: flex;
+            gap: 1.5rem;
+            align-items: flex-start;
+        }
+
+        .step-number {
+            background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .step-content h4 {
+            color: #ce93d8;
+            margin-bottom: 0.5rem;
+            font-size: 1.3rem;
+        }
+
+        .api-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border: 1px solid rgba(156, 39, 176, 0.3);
+        }
+
+        .api-card h4 {
+            color: #ba68c8;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .property-list {
+            display: grid;
+            gap: 0.8rem;
+        }
+
+        .property-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .property-name {
+            background: #7b1fa2;
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 5px;
+            font-family: monospace;
+            min-width: 120px;
+        }
+
+        .flow-diagram {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .flow-box {
+            background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            font-weight: bold;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .flow-arrow {
+            color: #ce93d8;
+            font-size: 1.5rem;
+        }
+
+        .tip-box {
+            background: rgba(76, 175, 80, 0.2);
+            border-left: 4px solid #4caf50;
+            padding: 1.5rem;
+            border-radius: 0 10px 10px 0;
+            margin: 1.5rem 0;
+        }
+
+        .tip-box h4 {
+            color: #81c784;
+            margin-bottom: 0.5rem;
+        }
+
+        .warning-box {
+            background: rgba(255, 152, 0, 0.2);
+            border-left: 4px solid #ff9800;
+            padding: 1.5rem;
+            border-radius: 0 10px 10px 0;
+            margin: 1.5rem 0;
+        }
+
+        .warning-box h4 {
+            color: #ffb74d;
+            margin-bottom: 0.5rem;
+        }
+
+        .prompt-template {
+            background: linear-gradient(135deg, rgba(103, 58, 183, 0.3), rgba(156, 39, 176, 0.2));
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            border: 1px solid rgba(156, 39, 176, 0.4);
+        }
+
+        .prompt-template h4 {
+            color: #ce93d8;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .prompt-content {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1.5rem;
+            border-radius: 10px;
+            font-family: 'Consolas', monospace;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .particle-preview {
+            width: 100%;
+            height: 200px;
+            border-radius: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .particle-preview.space-bg {
+            background: linear-gradient(135deg, #0a0a20, #1a1a40);
+        }
+
+        .particle-preview.ocean-bg {
+            background: linear-gradient(135deg, #001428, #003050);
+        }
+
+        /* 左右箭頭導航 */
+        .nav-arrow {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(123, 31, 162, 0.8);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px solid rgba(206, 147, 216, 0.5);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 9000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-arrow:hover {
+            background: rgba(156, 39, 176, 0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+        .prev-arrow { left: 30px; }
+        .next-arrow { right: 30px; }
+        .nav-arrow:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: translateY(-50%);
+        }
+
+        .slide-number {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(123, 31, 162, 0.8);
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            color: white;
+            z-index: 9000;
+        }
+
+        .slide-counter {
+            font-size: 1.2rem;
+            color: #ce93d8;
+        }
+
+        ul, ol {
+            margin-left: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.8rem;
+        }
+
+        .input-wrapper {
+            position: relative;
+            margin-top: 10px;
+        }
+
+        .practice-input {
+            width: 100%;
+            min-height: 80px;
+            padding: 15px;
+            padding-right: 70px;
+            border: 2px dashed #ff9800;
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            resize: vertical;
+            background: #fff;
+        }
+
+        .practice-input:focus {
+            outline: none;
+            border-color: #f57c00;
+            box-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
+        }
+
+        .copy-input-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .copy-input-btn:hover {
+            background: linear-gradient(135deg, #f57c00, #ef6c00);
+            transform: scale(1.05);
+        }
+
+        .copy-input-btn.copied {
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+        }
+
+        .complete-box {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.3), rgba(56, 142, 60, 0.2));
+            border: 2px solid #4caf50;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .complete-box h3 {
+            color: #81c784;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-header">
+        <div class="nav-title">Part 5-3：粒子系統與主題</div>
+        <div class="nav-links">
+            <a href="index.html">首頁</a>
+            <a href="Part5-2_手勢追蹤實作.html">上一節</a>
+            <a href="星海粒子Demo/index.html">實際 Demo</a>
+            <button class="fullscreen-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank">YT</a>
+        </div>
+    </nav>
+
+    <div class="slide-container">
+        <!-- Slide 1: 章節導覽 -->
+        <div class="slide active" id="slide1">
+            <h2 class="slide-title">✨ 粒子系統與主題</h2>
+            <div class="slide-content">
+                <div class="highlight-box">
+                    <h3>本節學習重點</h3>
+                    <p>實作粒子系統核心邏輯，並建立可切換的太空與海洋主題</p>
+                </div>
+
+                <div class="flow-diagram">
+                    <div class="flow-box">粒子類別設計</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">物理運動模擬</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">Canvas 繪製</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">主題系統</div>
+                </div>
+
+                <div class="two-column">
+                    <div class="theme-card theme-space">
+                        <h4>🚀 太空主題</h4>
+                        <p>深邃星空背景、閃爍星光粒子、螢光軌跡效果</p>
+                    </div>
+                    <div class="theme-card theme-ocean">
+                        <h4>🌊 海洋主題</h4>
+                        <p>深海漸層背景、漂浮氣泡粒子、生物發光效果</p>
+                    </div>
+                </div>
+
+                <div class="tip-box">
+                    <h4>💡 課程脈絡</h4>
+                    <p>這是整個提示詞工程課程的實作總結！我們將運用前面學到的太空探測與海洋觀測主題，創造視覺化的互動體驗</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: 粒子類別設計 -->
+        <div class="slide" id="slide2">
+            <h2 class="slide-title">⚛️ 粒子類別設計</h2>
+            <div class="slide-content">
+                <div class="highlight-box">
+                    <h3>Particle 類別架構</h3>
+                    <p>每個粒子都是獨立的物件，擁有位置、速度、大小、顏色等屬性</p>
+                </div>
+
+                <div class="code-block" data-lang="JavaScript">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+                    <code>// Particle.js - 粒子類別
+class Particle {
+    constructor(x, y, options = {}) {
+        // 位置
+        this.x = x;
+        this.y = y;
+
+        // 速度 (隨機初始速度)
+        this.vx = (Math.random() - 0.5) * 2;
+        this.vy = (Math.random() - 0.5) * 2;
+
+        // 外觀
+        this.radius = options.radius || Math.random() * 3 + 1;
+        this.color = options.color || '#ffffff';
+        this.alpha = options.alpha || 1;
+
+        // 生命週期
+        this.life = options.life || 100;
+        this.maxLife = this.life;
+        this.decay = options.decay || 0.98;
+
+        // 物理參數
+        this.friction = options.friction || 0.99;
+        this.gravity = options.gravity || 0;
+    }
+
+    update(targetX, targetY, attractStrength = 0.02) {
+        // 向目標點吸引
+        if (targetX !== undefined && targetY !== undefined) {
+            const dx = targetX - this.x;
+            const dy = targetY - this.y;
+            this.vx += dx * attractStrength;
+            this.vy += dy * attractStrength;
+        }
+
+        // 應用物理
+        this.vx *= this.friction;
+        this.vy *= this.friction;
+        this.vy += this.gravity;
+
+        // 更新位置
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // 生命衰減
+        this.life--;
+        this.alpha = this.life / this.maxLife;
+    }
+
+    isAlive() {
+        return this.life > 0 && this.alpha > 0.01;
+    }
+}</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 粒子繪製方法 -->
+        <div class="slide" id="slide3">
+            <h2 class="slide-title">🎨 粒子繪製方法</h2>
+            <div class="slide-content">
+                <div class="code-block" data-lang="JavaScript">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+                    <code>// 在 Particle 類別中加入繪製方法
+draw(ctx) {
+    ctx.save();
+
+    // 設定透明度
+    ctx.globalAlpha = this.alpha;
+
+    // 基本圓形繪製
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+
+    ctx.restore();
+}
+
+// 帶有光暈效果的繪製
+drawWithGlow(ctx, glowSize = 10) {
+    ctx.save();
+    ctx.globalAlpha = this.alpha;
+
+    // 創建放射漸層（光暈效果）
+    const gradient = ctx.createRadialGradient(
+        this.x, this.y, 0,
+        this.x, this.y, this.radius + glowSize
+    );
+
+    gradient.addColorStop(0, this.color);
+    gradient.addColorStop(0.4, this.color);
+    gradient.addColorStop(1, 'transparent');
+
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius + glowSize, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    ctx.restore();
+}
+
+// 星光閃爍效果
+drawStar(ctx, spikes = 4) {
+    ctx.save();
+    ctx.globalAlpha = this.alpha;
+    ctx.fillStyle = this.color;
+
+    ctx.beginPath();
+    for (let i = 0; i < spikes * 2; i++) {
+        const radius = i % 2 === 0 ? this.radius : this.radius * 0.4;
+        const angle = (i * Math.PI) / spikes;
+        const x = this.x + Math.cos(angle) * radius;
+        const y = this.y + Math.sin(angle) * radius;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+}</code>
+                </div>
+
+                <div class="api-card">
+                    <h4>繪製方法選擇</h4>
+                    <div class="property-list">
+                        <div class="property-item">
+                            <span class="property-name">draw()</span>
+                            <span>基本圓形，效能最佳</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-name">drawWithGlow()</span>
+                            <span>帶光暈，適合太空主題</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-name">drawStar()</span>
+                            <span>星形閃爍，增加視覺變化</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 粒子系統管理器 -->
+        <div class="slide" id="slide4">
+            <h2 class="slide-title">🔧 粒子系統管理器</h2>
+            <div class="slide-content">
+                <div class="code-block" data-lang="JavaScript">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+                    <code>// ParticleSystem.js - 粒子系統管理
+class ParticleSystem {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.particles = [];
+        this.maxParticles = 500;
+
+        // 目標位置（手勢追蹤點）
+        this.targetX = null;
+        this.targetY = null;
+
+        // 主題設定
+        this.theme = 'space';
+        this.themes = {
+            space: {
+                background: '#0a0a20',
+                colors: ['#ffffff', '#88ccff', '#ffaa88', '#aaffaa', '#ffaaff'],
+                glowEnabled: true,
+                attractStrength: 0.015
+            },
+            ocean: {
+                background: '#001428',
+                colors: ['#00ffff', '#00aaff', '#88ffcc', '#aaffff', '#ffffff'],
+                glowEnabled: true,
+                attractStrength: 0.01
+            }
+        };
+    }
+
+    setTarget(x, y) {
+        this.targetX = x;
+        this.targetY = y;
+    }
+
+    clearTarget() {
+        this.targetX = null;
+        this.targetY = null;
+    }
+
+    setTheme(themeName) {
+        if (this.themes[themeName]) {
+            this.theme = themeName;
+        }
+    }
+
+    spawnParticles(count = 5) {
+        const config = this.themes[this.theme];
+
+        for (let i = 0; i < count; i++) {
+            if (this.particles.length >= this.maxParticles) break;
+
+            // 在目標點周圍生成，或隨機位置
+            const x = this.targetX !== null
+                ? this.targetX + (Math.random() - 0.5) * 50
+                : Math.random() * this.canvas.width;
+            const y = this.targetY !== null
+                ? this.targetY + (Math.random() - 0.5) * 50
+                : Math.random() * this.canvas.height;
+
+            const color = config.colors[
+                Math.floor(Math.random() * config.colors.length)
+            ];
+
+            this.particles.push(new Particle(x, y, {
+                color: color,
+                radius: Math.random() * 4 + 1,
+                life: Math.random() * 80 + 40
+            }));
+        }
+    }
+
+    update() {
+        const config = this.themes[this.theme];
+
+        // 更新所有粒子
+        this.particles.forEach(p => {
+            p.update(this.targetX, this.targetY, config.attractStrength);
+        });
+
+        // 移除死亡粒子
+        this.particles = this.particles.filter(p => p.isAlive());
+
+        // 持續生成新粒子
+        if (this.targetX !== null) {
+            this.spawnParticles(3);
+        }
+    }
+
+    draw() {
+        const config = this.themes[this.theme];
+
+        // 清除畫布（帶有殘影效果）
+        this.ctx.fillStyle = config.background + 'dd';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // 繪製所有粒子
+        this.particles.forEach(p => {
+            if (config.glowEnabled) {
+                p.drawWithGlow(this.ctx, 8);
+            } else {
+                p.draw(this.ctx);
+            }
+        });
+    }
+}</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 動畫迴圈 -->
+        <div class="slide" id="slide5">
+            <h2 class="slide-title">🔄 動畫迴圈</h2>
+            <div class="slide-content">
+                <div class="highlight-box">
+                    <h3>requestAnimationFrame</h3>
+                    <p>使用瀏覽器原生的動畫 API，實現流暢的 60 FPS 動畫效果</p>
+                </div>
+
+                <div class="code-block" data-lang="JavaScript">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+                    <code>// 主程式整合
+class StarParticleApp {
+    constructor() {
+        this.canvas = document.getElementById('canvas');
+        this.ctx = this.canvas.getContext('2d');
+
+        // 設定畫布大小
+        this.resizeCanvas();
+        window.addEventListener('resize', () => this.resizeCanvas());
+
+        // 初始化模組
+        this.particleSystem = new ParticleSystem(this.canvas);
+        this.handTracker = new HandTracker({
+            videoElement: document.getElementById('webcam'),
+            onUpdate: (pos) => this.onHandUpdate(pos),
+            onLost: () => this.onHandLost()
+        });
+
+        this.isRunning = false;
+    }
+
+    resizeCanvas() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+
+    onHandUpdate(position) {
+        // 將正規化座標轉為畫布座標
+        const x = position.x * this.canvas.width;
+        const y = position.y * this.canvas.height;
+        this.particleSystem.setTarget(x, y);
+    }
+
+    onHandLost() {
+        this.particleSystem.clearTarget();
+    }
+
+    async start() {
+        await this.handTracker.init();
+        await this.handTracker.start();
+        this.isRunning = true;
+        this.animate();
+    }
+
+    animate() {
+        if (!this.isRunning) return;
+
+        // 更新粒子系統
+        this.particleSystem.update();
+
+        // 繪製
+        this.particleSystem.draw();
+
+        // 下一幀
+        requestAnimationFrame(() => this.animate());
+    }
+
+    setTheme(themeName) {
+        this.particleSystem.setTheme(themeName);
+    }
+}
+
+// 啟動應用程式
+const app = new StarParticleApp();
+app.start();</code>
+                </div>
+
+                <div class="flow-diagram">
+                    <div class="flow-box">animate()</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">update()</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">draw()</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">requestAnimationFrame</div>
+                    <span class="flow-arrow">↩</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 太空主題配置 -->
+        <div class="slide" id="slide6">
+            <h2 class="slide-title">🚀 太空主題配置</h2>
+            <div class="slide-content">
+                <div class="theme-card theme-space">
+                    <h4>Space Theme - 星海粒子</h4>
+                    <p>模擬深邃宇宙中的星光粒子效果</p>
+                </div>
+
+                <h3 style="margin: 1.5rem 0 1rem; color: #ce93d8;">色彩配置</h3>
+                <div class="color-palette">
+                    <div class="color-swatch" style="background: #ffffff;">#ffffff</div>
+                    <div class="color-swatch" style="background: #88ccff;">#88ccff</div>
+                    <div class="color-swatch" style="background: #ffaa88;">#ffaa88</div>
+                    <div class="color-swatch" style="background: #aaffaa;">#aaffaa</div>
+                    <div class="color-swatch" style="background: #ffaaff;">#ffaaff</div>
+                    <div class="color-swatch" style="background: #0a0a20;">背景</div>
+                </div>
+
+                <div class="code-block" data-lang="JavaScript">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+                    <code>// 太空主題完整配置
+const spaceTheme = {
+    name: 'space',
+    background: '#0a0a20',
+
+    // 粒子顏色（星光色調）
+    colors: [
+        '#ffffff',  // 純白星光
+        '#88ccff',  // 藍白星
+        '#ffaa88',  // 橙紅巨星
+        '#aaffaa',  // 綠色星雲
+        '#ffaaff'   // 紫色星雲
+    ],
+
+    // 粒子特性
+    particle: {
+        minRadius: 1,
+        maxRadius: 4,
+        minLife: 60,
+        maxLife: 120,
+        friction: 0.985,
+        gravity: 0
+    },
+
+    // 互動特性
+    interaction: {
+        attractStrength: 0.015,
+        spawnRate: 4,
+        maxParticles: 600
+    },
+
+    // 視覺效果
+    effects: {
+        glow: true,
+        glowSize: 10,
+        trail: true,
+        trailAlpha: 0.12
+    },
+
+    // 背景星星
+    backgroundStars: {
+        count: 200,
+        twinkle: true
+    }
+};</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: 海洋主題配置 -->
+        <div class="slide" id="slide7">
+            <h2 class="slide-title">🌊 海洋主題配置</h2>
+            <div class="slide-content">
+                <div class="theme-card theme-ocean">
+                    <h4>Ocean Theme - 深海粒子</h4>
+                    <p>模擬深海中的生物發光與氣泡漂浮效果</p>
+                </div>
+
+                <h3 style="margin: 1.5rem 0 1rem; color: #00ced1;">色彩配置</h3>
+                <div class="color-palette">
+                    <div class="color-swatch" style="background: #00ffff;">#00ffff</div>
+                    <div class="color-swatch" style="background: #00aaff;">#00aaff</div>
+                    <div class="color-swatch" style="background: #88ffcc;">#88ffcc</div>
+                    <div class="color-swatch" style="background: #aaffff;">#aaffff</div>
+                    <div class="color-swatch" style="background: #ff88aa;">#ff88aa</div>
+                    <div class="color-swatch" style="background: #001428;">背景</div>
+                </div>
+
+                <div class="code-block" data-lang="JavaScript">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+                    <code>// 海洋主題完整配置
+const oceanTheme = {
+    name: 'ocean',
+    background: '#001428',
+
+    // 粒子顏色（海洋生物發光色調）
+    colors: [
+        '#00ffff',  // 青色水母
+        '#00aaff',  // 深藍浮游
+        '#88ffcc',  // 綠色藻類
+        '#aaffff',  // 淺青氣泡
+        '#ff88aa'   // 粉紅珊瑚
+    ],
+
+    // 粒子特性（氣泡感）
+    particle: {
+        minRadius: 2,
+        maxRadius: 6,
+        minLife: 80,
+        maxLife: 150,
+        friction: 0.98,
+        gravity: -0.02  // 向上漂浮
+    },
+
+    // 互動特性（較柔和）
+    interaction: {
+        attractStrength: 0.008,
+        spawnRate: 3,
+        maxParticles: 400
+    },
+
+    // 視覺效果
+    effects: {
+        glow: true,
+        glowSize: 15,
+        trail: true,
+        trailAlpha: 0.08,
+        ripple: true  // 水波紋效果
+    },
+
+    // 背景元素
+    backgroundElements: {
+        bubbles: true,
+        caustics: true  // 水面焦散光
+    }
+};</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: 主題切換系統 -->
+        <div class="slide" id="slide8">
+            <h2 class="slide-title">🔀 主題切換系統</h2>
+            <div class="slide-content">
+                <div class="code-block" data-lang="JavaScript">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+                    <code>// ThemeManager.js - 主題管理器
+class ThemeManager {
+    constructor() {
+        this.themes = {
+            space: spaceTheme,
+            ocean: oceanTheme
+        };
+        this.currentTheme = 'space';
+        this.transitionDuration = 1000; // ms
+        this.isTransitioning = false;
+    }
+
+    getCurrentTheme() {
+        return this.themes[this.currentTheme];
+    }
+
+    async switchTheme(themeName) {
+        if (!this.themes[themeName] || this.isTransitioning) return;
+
+        this.isTransitioning = true;
+
+        // 淡出效果
+        await this.fadeOut();
+
+        // 切換主題
+        this.currentTheme = themeName;
+
+        // 淡入效果
+        await this.fadeIn();
+
+        this.isTransitioning = false;
+
+        // 觸發主題變更事件
+        this.onThemeChange?.(this.themes[themeName]);
+    }
+
+    fadeOut() {
+        return new Promise(resolve => {
+            const overlay = document.getElementById('transition-overlay');
+            overlay.style.opacity = '1';
+            setTimeout(resolve, this.transitionDuration / 2);
+        });
+    }
+
+    fadeIn() {
+        return new Promise(resolve => {
+            const overlay = document.getElementById('transition-overlay');
+            overlay.style.opacity = '0';
+            setTimeout(resolve, this.transitionDuration / 2);
+        });
+    }
+
+    toggle() {
+        const next = this.currentTheme === 'space' ? 'ocean' : 'space';
+        this.switchTheme(next);
+    }
+}
+
+// UI 控制
+function setupThemeControls() {
+    const themeManager = new ThemeManager();
+
+    document.getElementById('btn-space').addEventListener('click', () => {
+        themeManager.switchTheme('space');
+    });
+
+    document.getElementById('btn-ocean').addEventListener('click', () => {
+        themeManager.switchTheme('ocean');
+    });
+
+    // 鍵盤切換 (按 T 鍵)
+    document.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 't') {
+            themeManager.toggle();
+        }
+    });
+}</code>
+                </div>
+
+                <div class="tip-box">
+                    <h4>💡 使用者體驗提示</h4>
+                    <p>加入平滑的過場動畫，讓主題切換更加自然。可以考慮粒子顏色漸變或背景漸層過渡</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: 效能優化技巧 -->
+        <div class="slide" id="slide9">
+            <h2 class="slide-title">⚡ 效能優化技巧</h2>
+            <div class="slide-content">
+                <div class="two-column">
+                    <div class="api-card">
+                        <h4>粒子數量控制</h4>
+                        <ul>
+                            <li>設定 maxParticles 上限</li>
+                            <li>使用物件池減少 GC</li>
+                            <li>動態調整生成率</li>
+                        </ul>
+                    </div>
+                    <div class="api-card">
+                        <h4>繪製優化</h4>
+                        <ul>
+                            <li>批次繪製相同顏色</li>
+                            <li>減少 ctx.save/restore</li>
+                            <li>簡化光暈計算</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="code-block" data-lang="JavaScript">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+                    <code>// 物件池模式 - 減少記憶體分配
+class ParticlePool {
+    constructor(size = 1000) {
+        this.pool = [];
+        this.activeParticles = [];
+
+        // 預先建立粒子物件
+        for (let i = 0; i < size; i++) {
+            this.pool.push(new Particle(0, 0));
+        }
+    }
+
+    acquire(x, y, options) {
+        let particle;
+
+        if (this.pool.length > 0) {
+            // 從池中取出
+            particle = this.pool.pop();
+            particle.reset(x, y, options);
+        } else {
+            // 池空了，建立新的
+            particle = new Particle(x, y, options);
+        }
+
+        this.activeParticles.push(particle);
+        return particle;
+    }
+
+    release(particle) {
+        const index = this.activeParticles.indexOf(particle);
+        if (index > -1) {
+            this.activeParticles.splice(index, 1);
+            this.pool.push(particle);
+        }
+    }
+
+    update() {
+        // 批次處理，減少陣列操作
+        const toRelease = [];
+
+        for (const p of this.activeParticles) {
+            p.update();
+            if (!p.isAlive()) {
+                toRelease.push(p);
+            }
+        }
+
+        for (const p of toRelease) {
+            this.release(p);
+        }
+    }
+}</code>
+                </div>
+
+                <div class="warning-box">
+                    <h4>⚠️ 效能監控</h4>
+                    <p>使用 Chrome DevTools 的 Performance 面板監控 FPS，確保維持在 30+ FPS 以上</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: AI 輔助開發提示詞 -->
+        <div class="slide" id="slide10">
+            <h2 class="slide-title">🤖 AI 輔助開發提示詞</h2>
+            <div class="slide-content">
+                <div class="prompt-template">
+                    <h4>🎨 視覺效果設計提示詞</h4>
+                    <div class="prompt-content">我正在開發一個粒子系統視覺效果，主題是「{太空/海洋}」。
+
+目前效果：
+- 基本的圓形粒子
+- 有光暈效果
+- 會被手勢吸引
+
+希望增強的效果：
+{描述你想要的視覺效果}
+
+請提供：
+1. Canvas 2D API 的實作程式碼
+2. 參數建議（顏色、大小、動畫時間等）
+3. 效能考量與優化建議</div>
+                </div>
+
+                <div class="prompt-template">
+                    <h4>🔧 功能擴展提示詞</h4>
+                    <div class="prompt-content">我想在粒子系統中加入以下功能：
+
+[功能描述]
+{例如：粒子之間的連線效果}
+
+[現有程式碼結構]
+- Particle 類別：負責單一粒子的狀態與繪製
+- ParticleSystem 類別：管理所有粒子
+- 主程式使用 requestAnimationFrame 進行動畫
+
+[要求]
+1. 請提供完整的實作程式碼
+2. 說明如何整合到現有架構
+3. 分析對效能的影響
+4. 提供可調整的參數</div>
+                </div>
+
+                <div class="prompt-template">
+                    <h4>🐛 問題排解提示詞</h4>
+                    <div class="prompt-content">我的粒子系統出現以下問題：
+
+[問題描述]
+{例如：粒子動作卡頓、記憶體持續增加}
+
+[環境資訊]
+- 瀏覽器：{版本}
+- 粒子數量：{數量}
+- 畫布大小：{解析度}
+
+[已嘗試的解決方案]
+{列出你試過的方法}
+
+請分析可能的原因並提供解決方案。</div>
+                </div>
+
+                <div class="prompt-template" style="margin-top: 1.5rem; background: linear-gradient(135deg, rgba(255, 152, 0, 0.2), rgba(255, 193, 7, 0.1)); border: 1px solid rgba(255, 152, 0, 0.4);">
+                    <h4 style="color: #ffb74d;">練習：撰寫你的提示詞</h4>
+                    <p style="margin-bottom: 1rem; color: #e0e0e0;">參考上方的提示詞範本，撰寫一個自己的粒子系統開發提示詞：</p>
+                    <div class="input-wrapper">
+                        <textarea class="practice-input" id="practice1" placeholder="在這裡寫下你的提示詞..."></textarea>
+                        <button class="copy-input-btn" onclick="copyInput('practice1')">複製</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: 專案完整檔案結構 -->
+        <div class="slide" id="slide11">
+            <h2 class="slide-title">📁 專案完整檔案結構</h2>
+            <div class="slide-content">
+                <div class="code-block" data-lang="目錄結構">
+                    <code>星海粒子Demo/
+├── index.html              # 主頁面
+├── css/
+│   └── style.css          # 樣式表
+├── js/
+│   ├── main.js            # 主程式進入點
+│   ├── modules/
+│   │   ├── HandTracker.js     # 手勢追蹤模組
+│   │   ├── Particle.js        # 粒子類別
+│   │   ├── ParticleSystem.js  # 粒子系統
+│   │   └── ThemeManager.js    # 主題管理
+│   └── themes/
+│       ├── space.js           # 太空主題配置
+│       └── ocean.js           # 海洋主題配置
+└── assets/
+    └── icons/             # UI 圖示</code>
+                </div>
+
+                <div class="api-card">
+                    <h4>各模組職責</h4>
+                    <div class="property-list">
+                        <div class="property-item">
+                            <span class="property-name">HandTracker</span>
+                            <span>封裝 MediaPipe，輸出正規化座標</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-name">Particle</span>
+                            <span>單一粒子的狀態、物理、繪製</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-name">ParticleSystem</span>
+                            <span>管理粒子集合、更新與渲染</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-name">ThemeManager</span>
+                            <span>主題切換、過場動畫</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tip-box">
+                    <h4>💡 模組化優點</h4>
+                    <p>每個模組獨立運作，容易測試、維護和擴展。日後若要加入新主題或新效果，只需修改對應模組</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: 課程總結 -->
+        <div class="slide" id="slide12">
+            <h2 class="slide-title">🎓 課程總結</h2>
+            <div class="slide-content">
+                <div class="complete-box">
+                    <h3>恭喜完成提示詞工程課程！</h3>
+                    <p>你已經學會了從基礎到進階的提示詞技巧，並完成了一個互動式專案</p>
+                </div>
+
+                <div class="two-column">
+                    <div class="api-card">
+                        <h4>📝 Part 1-2 文字提示詞</h4>
+                        <ul>
+                            <li>RTFC 框架</li>
+                            <li>Few-shot Learning</li>
+                            <li>Chain of Thought</li>
+                            <li>文案/教案/學習單生成</li>
+                        </ul>
+                    </div>
+                    <div class="api-card">
+                        <h4>🎨 Part 3 圖像提示詞</h4>
+                        <ul>
+                            <li>SSCL 框架</li>
+                            <li>教學素材圖像</li>
+                            <li>簡報與社群圖</li>
+                            <li>風格與構圖控制</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="two-column">
+                    <div class="api-card">
+                        <h4>🏫 Part 4 教學備課</h4>
+                        <ul>
+                            <li>情境式課程設計</li>
+                            <li>太空探測主題實作</li>
+                            <li>海洋觀測主題實作</li>
+                            <li>差異化教學策略</li>
+                        </ul>
+                    </div>
+                    <div class="api-card">
+                        <h4>✨ Part 5 互動專案</h4>
+                        <ul>
+                            <li>MediaPipe 手勢追蹤</li>
+                            <li>Canvas 粒子系統</li>
+                            <li>主題切換系統</li>
+                            <li>AI 輔助開發流程</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <h3>🚀 持續學習建議</h3>
+                    <ul>
+                        <li><strong>實踐</strong>：將今天學到的技巧應用到日常教學工作中</li>
+                        <li><strong>分享</strong>：與同事交流心得，互相學習新的提示詞技巧</li>
+                        <li><strong>探索</strong>：持續關注 AI 工具的更新，嘗試新功能</li>
+                        <li><strong>創作</strong>：發揮創意，開發更多教學輔助工具</li>
+                    </ul>
+                </div>
+
+                <div class="flow-diagram">
+                    <a href="星海粒子Demo/index.html" class="flow-box" style="text-decoration: none; color: white;">
+                        前往體驗 星海粒子 Demo →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 左右箭頭導航 -->
+    <button class="nav-arrow prev-arrow" onclick="prevSlide()">◀</button>
+    <button class="nav-arrow next-arrow" onclick="nextSlide()">▶</button>
+    <div class="slide-number"><span id="currentSlide">1</span> / <span id="totalSlides">12</span></div>
+
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 12;
+
+        function showSlide(n) {
+            const slides = document.querySelectorAll('.slide');
+
+            if (n > totalSlides) currentSlide = totalSlides;
+            if (n < 1) currentSlide = 1;
+
+            slides.forEach(slide => slide.classList.remove('active'));
+            slides[currentSlide - 1].classList.add('active');
+
+            document.getElementById('currentSlide').textContent = currentSlide;
+
+            // 更新箭頭按鈕狀態
+            document.querySelector('.prev-arrow').disabled = currentSlide === 1;
+            document.querySelector('.next-arrow').disabled = currentSlide === totalSlides;
+        }
+
+        function prevSlide() {
+            if (currentSlide > 1) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides) {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
+        }
+
+        function copyCode(btn) {
+            const codeBlock = btn.parentElement;
+            const code = codeBlock.querySelector('code').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                btn.textContent = '已複製！';
+                setTimeout(() => btn.textContent = '複製', 2000);
+            });
+        }
+
+        // 鍵盤控制
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevSlide();
+            }
+        });
+
+        // 初始化
+        showSlide(currentSlide);
+
+        // 複製練習輸入框內容
+        function copyInput(id) {
+            const textarea = document.getElementById(id);
+            const btn = textarea.parentElement.querySelector('.copy-input-btn');
+            if (textarea.value.trim() === '') {
+                alert('請先輸入內容再複製！');
+                return;
+            }
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                btn.textContent = '已複製！';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = '複製';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        // 全螢幕切換
+        function toggleFullscreen() {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                btn.textContent = '離開全螢幕';
+            } else {
+                document.exitFullscreen();
+                btn.textContent = '全螢幕';
+            }
+        }
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) btn.textContent = '全螢幕';
+        });
+    </script>
+
+    <footer style="text-align: center; padding: 2rem; color: #888; font-size: 0.9rem;">
+        <p>提示詞工程教學 - Part 5-3：粒子系統與主題</p>
+        <p>© 2026 阿亮老師 | 版權所有</p>
+    </footer>
+</body>
+</html>

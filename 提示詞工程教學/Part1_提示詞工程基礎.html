@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Part 1 - 提示詞工程基礎</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a237e 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            color: #333;
+        }
+
+        /* 導航列 */
+        .nav-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(26, 35, 126, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 10000;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .nav-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #81d4fa;
+            letter-spacing: 1px;
+        }
+
+        .nav-buttons { display: flex; gap: 12px; }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* 導航箭頭 */
+        .nav-arrow {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(26, 35, 126, 0.8);
+            color: white;
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.3);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 9000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-arrow:hover {
+            background: rgba(57, 73, 171, 0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+        .prev-arrow { left: 30px; }
+        .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* 投影片容器 */
+        .slide-container {
+            width: 100%;
+            height: 100vh;
+            padding-top: 60px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .slide {
+            position: absolute;
+            top: 60px; left: 0;
+            width: 100%;
+            height: calc(100vh - 60px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 10;
+        }
+
+        .slide.active {
+            display: flex;
+            opacity: 1;
+            z-index: 20;
+        }
+
+        /* 內容卡片 */
+        .content-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            padding: 50px 60px;
+            max-width: 1300px;
+            width: 95%;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* 標題樣式 */
+        h1 {
+            color: #1a237e;
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #1a237e, #3949ab);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        h2 {
+            color: #1a237e;
+            font-size: 34px;
+            margin-bottom: 30px;
+            border-bottom: 4px solid #3949ab;
+            padding-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        h3 { color: #283593; font-size: 24px; margin: 25px 0 15px 0; }
+        h4 { color: #3949ab; font-size: 20px; margin: 20px 0 10px 0; }
+
+        p, li {
+            font-size: 19px;
+            line-height: 1.9;
+            color: #444;
+            margin-bottom: 12px;
+        }
+
+        ul, ol {
+            margin-left: 25px;
+            margin-bottom: 20px;
+        }
+
+        li { margin-bottom: 10px; }
+
+        code {
+            background: #e8eaf6;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-family: 'Consolas', monospace;
+            color: #1a237e;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        pre {
+            background: linear-gradient(135deg, #1a237e, #283593);
+            color: #e8eaf6;
+            padding: 25px 30px;
+            border-radius: 16px;
+            overflow-x: auto;
+            margin: 25px 0;
+            font-size: 16px;
+            line-height: 1.7;
+            font-family: 'Consolas', monospace;
+            box-shadow: 0 8px 25px rgba(26, 35, 126, 0.3);
+        }
+
+        /* 提示方塊 */
+        .box {
+            padding: 25px 30px;
+            border-radius: 16px;
+            margin: 25px 0;
+            border-left: 6px solid;
+            font-size: 18px;
+            line-height: 1.8;
+        }
+        .info { background: #e3f2fd; border-color: #1976d2; color: #0d47a1; }
+        .tip { background: #e8f5e9; border-color: #43a047; color: #1b5e20; }
+        .warning { background: #fff3e0; border-color: #ff9800; color: #e65100; }
+        .example { background: #f3e5f5; border-color: #7b1fa2; color: #4a148c; }
+
+        .highlight {
+            background: linear-gradient(120deg, #81d4fa 0%, #4fc3f7 100%);
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            color: #0d47a1;
+        }
+
+        /* 概念卡片網格 */
+        .concept-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .concept-card {
+            background: linear-gradient(135deg, #f5f5f5, #e8eaf6);
+            padding: 28px;
+            border-radius: 18px;
+            border: 2px solid #c5cae9;
+            transition: all 0.3s ease;
+        }
+        .concept-card:hover {
+            transform: translateY(-8px);
+            border-color: #3949ab;
+            box-shadow: 0 12px 30px rgba(26, 35, 126, 0.15);
+        }
+        .concept-card h4 {
+            color: #1a237e;
+            margin-bottom: 12px;
+            font-size: 22px;
+        }
+
+        /* 結構展示 */
+        .structure-box {
+            background: linear-gradient(135deg, #1a237e, #283593);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            margin: 30px 0;
+        }
+
+        .structure-item {
+            background: rgba(255,255,255,0.15);
+            padding: 18px 25px;
+            border-radius: 12px;
+            margin: 12px 0;
+            border-left: 5px solid #81d4fa;
+            font-size: 18px;
+        }
+
+        .structure-item strong {
+            color: #81d4fa;
+            font-size: 20px;
+        }
+
+        /* 對比表格 */
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            font-size: 17px;
+        }
+
+        .compare-table th, .compare-table td {
+            padding: 18px 20px;
+            text-align: left;
+            border-bottom: 2px solid #e8eaf6;
+        }
+
+        .compare-table th {
+            background: linear-gradient(135deg, #1a237e, #283593);
+            color: white;
+            font-weight: 700;
+        }
+
+        .compare-table tr:hover {
+            background: #f5f5f5;
+        }
+
+        .bad { color: #c62828; }
+        .good { color: #2e7d32; }
+
+        /* 頁碼指示器 */
+        .indicators {
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 4000;
+            padding: 12px 25px;
+            background: rgba(26, 35, 126, 0.9);
+            border-radius: 30px;
+            backdrop-filter: blur(5px);
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .dot.active {
+            background: #81d4fa;
+            transform: scale(1.4);
+        }
+
+        /* 封面特殊樣式 */
+        .cover-slide {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .cover-slide .subtitle {
+            color: #3949ab;
+            font-size: 24px;
+            letter-spacing: 3px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .cover-slide .tagline {
+            font-size: 20px;
+            color: #666;
+            margin-top: 30px;
+            max-width: 700px;
+            line-height: 1.8;
+        }
+
+        .cover-tags {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .cover-tags span {
+            background: linear-gradient(135deg, #1a237e, #3949ab);
+            color: white;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 導航列 -->
+    <div class="nav-bar">
+        <div class="nav-title">Part 1 - 提示詞工程基礎</div>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-btn">首頁</a>
+            <button class="nav-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.facebook.com/?locale=zh_TW" target="_blank" class="nav-btn">FB</a>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="nav-btn">YT</a>
+        </div>
+    </div>
+
+    <!-- 投影片內容 -->
+    <div class="slide-container">
+
+        <!-- Slide 1: 封面 -->
+        <div class="slide active">
+            <div class="content-card cover-slide">
+                <div class="subtitle">Prompt Engineering Fundamentals</div>
+                <h1>提示詞工程基礎</h1>
+                <p class="tagline">
+                    學習與 AI 有效溝通的核心技巧<br>
+                    讓生成式 AI 成為你最強大的助手
+                </p>
+                <div class="cover-tags">
+                    <span>提示詞結構</span>
+                    <span>撰寫技巧</span>
+                    <span>常見模式</span>
+                    <span>實作練習</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: 學習目標 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>學習目標</h2>
+                <p>完成本單元後，你將能夠：</p>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <h4>理解基本概念</h4>
+                        <p>了解什麼是提示詞工程，以及為何它如此重要</p>
+                    </div>
+                    <div class="concept-card">
+                        <h4>掌握核心結構</h4>
+                        <p>學會提示詞的基本組成：角色、任務、格式、限制</p>
+                    </div>
+                    <div class="concept-card">
+                        <h4>應用撰寫技巧</h4>
+                        <p>運用具體化、步驟化、範例化等技巧優化提示詞</p>
+                    </div>
+                    <div class="concept-card">
+                        <h4>識別常見模式</h4>
+                        <p>認識並應用 Few-shot、Chain of Thought 等進階模式</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 什麼是提示詞工程 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>什麼是提示詞工程？</h2>
+                <div class="box info">
+                    <strong>提示詞工程 (Prompt Engineering)</strong> 是一門設計與優化「輸入指令」的技術，目的是引導 AI 模型產生更精確、更符合需求的輸出結果。
+                </div>
+                <h3>為什麼提示詞工程如此重要？</h3>
+                <ul>
+                    <li><strong>相同的 AI，不同的結果</strong>：好的提示詞能讓 AI 發揮 120% 的效能</li>
+                    <li><strong>節省時間與成本</strong>：減少來回修改的次數，一次到位</li>
+                    <li><strong>提升輸出品質</strong>：獲得更專業、更結構化的回覆</li>
+                    <li><strong>解鎖進階功能</strong>：透過巧妙的提示詞實現複雜任務</li>
+                </ul>
+                <div class="box tip">
+                    把 AI 想像成一位能力超強但需要明確指示的助手。你的指令越清楚，它的表現就越出色！
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 提示詞的基本結構 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>提示詞的基本結構</h2>
+                <p>一個完整的提示詞通常包含以下四個核心要素：</p>
+                <div class="structure-box">
+                    <div class="structure-item">
+                        <strong>1. 角色設定 (Role)</strong><br>
+                        告訴 AI 要扮演什麼身份，例如：專業教師、資深工程師、創意作家
+                    </div>
+                    <div class="structure-item">
+                        <strong>2. 任務描述 (Task)</strong><br>
+                        明確說明要 AI 完成什麼事情，越具體越好
+                    </div>
+                    <div class="structure-item">
+                        <strong>3. 格式要求 (Format)</strong><br>
+                        指定輸出的形式，如：條列式、表格、Markdown、JSON
+                    </div>
+                    <div class="structure-item">
+                        <strong>4. 限制條件 (Constraints)</strong><br>
+                        設定邊界與規則，例如：字數限制、語氣要求、不可包含的內容
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 結構範例 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>結構化提示詞範例</h2>
+                <pre>## 角色設定
+你是一位擁有 10 年經驗的國小自然科教師，專精於太空科學教育。
+
+## 任務描述
+請設計一份關於「火星探測」的教學活動，適合國小五年級學生。
+
+## 格式要求
+請以下列結構呈現：
+1. 教學目標（3-5 點）
+2. 引起動機活動
+3. 主要教學內容
+4. 學生操作活動
+5. 評量方式
+
+## 限制條件
+- 教學時間：40 分鐘
+- 避免過於艱深的專業術語
+- 需包含至少一個動手做的活動
+- 使用繁體中文</pre>
+                <div class="box tip">
+                    使用 Markdown 格式（如 ## 標題、- 條列）可以讓 AI 更清楚理解你的提示詞結構！
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 好壞提示詞對比 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>好壞提示詞對比</h2>
+                <table class="compare-table">
+                    <tr>
+                        <th style="width: 50%;">模糊的提示詞</th>
+                        <th style="width: 50%;">具體的提示詞</th>
+                    </tr>
+                    <tr>
+                        <td class="bad">「幫我寫一篇關於海洋的文章」</td>
+                        <td class="good">「請以國小四年級學生能理解的語言，撰寫一篇 300 字的短文，介紹海洋中的三種特殊生物，每種生物需包含外觀特徵和有趣事實」</td>
+                    </tr>
+                    <tr>
+                        <td class="bad">「設計一份學習單」</td>
+                        <td class="good">「設計一份適合國中生的火星探測主題學習單，包含 5 題選擇題、3 題問答題，並附上參考答案」</td>
+                    </tr>
+                    <tr>
+                        <td class="bad">「給我一些教學建議」</td>
+                        <td class="good">「針對不同學習程度的學生（高、中、低成就），各提供 2 個差異化教學策略，應用於『深海探測』單元」</td>
+                    </tr>
+                </table>
+                <div class="box warning">
+                    <strong>關鍵原則：</strong>把 AI 當作一位新進同事，它有能力但不了解你的情境。你給的資訊越詳細，它越能幫上忙！
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: 五大撰寫技巧 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>五大撰寫技巧</h2>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <h4>1. 具體化</h4>
+                        <p>避免模糊詞彙，使用數字、名稱、明確描述<br><br>
+                        <code>「一些」→「5 個」</code><br>
+                        <code>「簡短」→「200 字以內」</code></p>
+                    </div>
+                    <div class="concept-card">
+                        <h4>2. 步驟化</h4>
+                        <p>將複雜任務拆解成步驟，引導 AI 逐步思考<br><br>
+                        <code>「請先分析...再歸納...最後提出...」</code></p>
+                    </div>
+                    <div class="concept-card">
+                        <h4>3. 範例化</h4>
+                        <p>提供範例讓 AI 理解你要的格式與風格<br><br>
+                        <code>「例如：[範例內容]，請依此格式...」</code></p>
+                    </div>
+                    <div class="concept-card">
+                        <h4>4. 角色化</h4>
+                        <p>賦予 AI 特定身份，獲得專業化回覆<br><br>
+                        <code>「你是一位資深的海洋生物學家...」</code></p>
+                    </div>
+                    <div class="concept-card">
+                        <h4>5. 限制化</h4>
+                        <p>設定明確的邊界與規則<br><br>
+                        <code>「請勿使用專業術語」</code><br>
+                        <code>「只討論 2020 年後的資料」</code></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Few-shot 模式 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>進階模式：Few-shot Learning</h2>
+                <div class="box info">
+                    <strong>Few-shot（少樣本學習）</strong>：透過提供幾個範例，讓 AI 理解你期望的輸出模式，並依此生成類似的內容。
+                </div>
+                <h3>範例：生成太空知識問答題</h3>
+                <pre>請根據以下範例格式，生成 3 題關於「月球」的知識問答：
+
+【範例 1】
+問題：火星為什麼被稱為「紅色星球」？
+答案：因為火星表面富含氧化鐵（鐵鏽），使其呈現紅色外觀。
+
+【範例 2】
+問題：哪顆行星的自轉方向與其他行星相反？
+答案：金星。金星是太陽系中唯一逆向自轉的行星。
+
+請依此格式，生成關於「月球」的問答題：</pre>
+                <div class="box tip">
+                    提供 2-3 個範例通常就足夠讓 AI 理解模式。範例品質比數量更重要！
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: Chain of Thought -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>進階模式：Chain of Thought</h2>
+                <div class="box info">
+                    <strong>Chain of Thought（思維鏈）</strong>：引導 AI 展示推理過程，而非直接給答案。這能提升複雜問題的解答品質。
+                </div>
+                <h3>範例：課程設計思考</h3>
+                <pre>請設計一堂關於「海洋污染」的教學活動。
+
+在設計之前，請先思考並回答以下問題：
+1. 這個主題最核心的概念是什麼？
+2. 學生可能有哪些先備知識？
+3. 哪些迷思概念需要特別處理？
+4. 什麼樣的活動能引起學生興趣？
+
+請依序思考上述問題後，再提出完整的教學設計。</pre>
+                <div class="box tip">
+                    加入「請一步一步思考」「請先分析再作答」等指令，可以顯著提升 AI 的推理品質！
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: 迭代優化 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>迭代優化策略</h2>
+                <p>提示詞工程是一個持續優化的過程，很少一次就完美：</p>
+                <div class="structure-box">
+                    <div class="structure-item">
+                        <strong>第一輪：基礎版</strong><br>
+                        先寫出基本需求，觀察 AI 的回應方向是否正確
+                    </div>
+                    <div class="structure-item">
+                        <strong>第二輪：補充細節</strong><br>
+                        根據初步結果，補充遺漏的細節與限制條件
+                    </div>
+                    <div class="structure-item">
+                        <strong>第三輪：調整格式</strong><br>
+                        如果內容正確但格式不對，專門調整格式要求
+                    </div>
+                    <div class="structure-item">
+                        <strong>第四輪：精煉優化</strong><br>
+                        微調用詞、刪除冗餘指令，找到最精簡有效的版本
+                    </div>
+                </div>
+                <div class="box warning">
+                    <strong>保存有效的提示詞！</strong>當你找到效果好的提示詞，記得保存起來作為模板重複使用。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: 常見錯誤 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>避免常見錯誤</h2>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <h4>過度簡化</h4>
+                        <p class="bad">「寫個教案」</p>
+                        <p>缺乏主題、年級、時間等必要資訊</p>
+                    </div>
+                    <div class="concept-card">
+                        <h4>過度複雜</h4>
+                        <p class="bad">一次給予太多不相關的指令</p>
+                        <p>AI 可能會混淆或遺漏部分要求</p>
+                    </div>
+                    <div class="concept-card">
+                        <h4>矛盾指令</h4>
+                        <p class="bad">「要簡短但要詳細說明」</p>
+                        <p>互相矛盾的要求會讓 AI 無所適從</p>
+                    </div>
+                    <div class="concept-card">
+                        <h4>假設太多</h4>
+                        <p class="bad">認為 AI 知道你的情境</p>
+                        <p>明確提供背景資訊和脈絡</p>
+                    </div>
+                </div>
+                <div class="box tip">
+                    <strong>黃金法則：</strong>如果你的指令給另一位陌生人看，他能完全理解並執行嗎？如果不行，你的提示詞可能還需要更清楚。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: 實作練習 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>實作練習</h2>
+                <div class="box example">
+                    <strong>練習任務：</strong>請優化以下模糊的提示詞，使其更加具體、結構化：
+                </div>
+                <h3>原始提示詞：</h3>
+                <pre style="background: #ffebee; color: #c62828;">「幫我設計一個關於太空的教學活動」</pre>
+                <h3>優化方向：</h3>
+                <ul>
+                    <li>加入<strong>角色設定</strong>：你希望 AI 以什麼身份回答？</li>
+                    <li>明確<strong>目標對象</strong>：幾年級的學生？程度如何？</li>
+                    <li>具體<strong>主題範圍</strong>：太空的哪個面向？</li>
+                    <li>指定<strong>輸出格式</strong>：需要什麼結構？</li>
+                    <li>設定<strong>限制條件</strong>：時間、資源、難度等</li>
+                </ul>
+                <div class="box tip">
+                    試著寫出你的優化版本，然後在 AI 中測試效果！
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 13: 總結 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Part 1 總結</h2>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <h4>核心概念</h4>
+                        <p>提示詞工程是與 AI 有效溝通的關鍵技術</p>
+                    </div>
+                    <div class="concept-card">
+                        <h4>基本結構</h4>
+                        <p>角色 + 任務 + 格式 + 限制</p>
+                    </div>
+                    <div class="concept-card">
+                        <h4>撰寫技巧</h4>
+                        <p>具體化、步驟化、範例化、角色化、限制化</p>
+                    </div>
+                    <div class="concept-card">
+                        <h4>進階模式</h4>
+                        <p>Few-shot Learning、Chain of Thought</p>
+                    </div>
+                </div>
+                <div class="box info" style="margin-top: 30px;">
+                    <strong>下一單元預告：</strong>我們將運用這些技巧，實際進行「太空探測與海洋觀測」主題的教學備課，體驗 AI 如何協助教師設計課程！
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 導航箭頭 -->
+    <button class="nav-arrow prev-arrow" id="prevBtn" onclick="changeSlide(-1)">&#10094;</button>
+    <button class="nav-arrow next-arrow" id="nextBtn" onclick="changeSlide(1)">&#10095;</button>
+
+    <!-- 頁碼 -->
+    <div class="indicators" id="indicatorContainer"></div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        function init() {
+            createIndicators();
+            showSlide(0);
+            updateButtons();
+            document.addEventListener('keydown', handleKeydown);
+        }
+
+        function handleKeydown(e) {
+            if (e.key === 'ArrowLeft') changeSlide(-1);
+            if (e.key === 'ArrowRight') changeSlide(1);
+        }
+
+        function createIndicators() {
+            const container = document.getElementById('indicatorContainer');
+            container.innerHTML = '';
+            slides.forEach((_, index) => {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                dot.onclick = () => goToSlide(index);
+                container.appendChild(dot);
+            });
+        }
+
+        function showSlide(index) {
+            if (index < 0) index = 0;
+            if (index >= totalSlides) index = totalSlides - 1;
+
+            slides.forEach(slide => slide.classList.remove('active'));
+            slides[index].classList.add('active');
+            currentSlide = index;
+
+            const dots = document.querySelectorAll('.dot');
+            dots.forEach((dot, idx) => {
+                dot.classList.toggle('active', idx === index);
+            });
+
+            updateButtons();
+        }
+
+        function changeSlide(direction) {
+            showSlide(currentSlide + direction);
+        }
+
+        function goToSlide(index) {
+            showSlide(index);
+        }
+
+        function updateButtons() {
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

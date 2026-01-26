@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星海粒子互動體驗</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            overflow: hidden;
+            background: #0a0a20;
+        }
+
+        /* 主畫布 */
+        #particleCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* 攝影機預覽 */
+        #webcamPreview {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            height: 150px;
+            border: 3px solid rgba(255, 0, 255, 0.5);
+            border-radius: 15px;
+            z-index: 100;
+            transform: scaleX(-1);
+            object-fit: cover;
+        }
+
+        /* 控制面板 */
+        .control-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(20, 20, 50, 0.9);
+            padding: 25px;
+            border-radius: 20px;
+            z-index: 100;
+            border: 2px solid rgba(255, 0, 255, 0.3);
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.2);
+            min-width: 280px;
+        }
+
+        .control-panel h2 {
+            color: #fff;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            background: linear-gradient(90deg, #ff00ff, #00ffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            color: #b39ddb;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .theme-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .theme-btn {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .theme-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .theme-btn.active {
+            border-color: #ff00ff;
+            background: rgba(255, 0, 255, 0.3);
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+        }
+
+        .theme-btn.space-btn.active {
+            border-color: #4fc3f7;
+            background: rgba(79, 195, 247, 0.3);
+            box-shadow: 0 0 15px rgba(79, 195, 247, 0.5);
+        }
+
+        .theme-btn.ocean-btn.active {
+            border-color: #00ffaa;
+            background: rgba(0, 255, 170, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 170, 0.5);
+        }
+
+        /* 滑桿樣式 */
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff00ff, #00ffff);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+        }
+
+        .value-display {
+            color: #fff;
+            font-size: 12px;
+            text-align: right;
+            margin-top: 5px;
+        }
+
+        /* 文字輸入 */
+        .text-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .text-input:focus {
+            border-color: #ff00ff;
+        }
+
+        .apply-btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #ff00ff, #00ffff);
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .apply-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.6);
+        }
+
+        /* 狀態指示 */
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            font-size: 13px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            color: #888;
+            margin: 5px 0;
+        }
+
+        .status-value {
+            color: #00ff88;
+        }
+
+        .status-value.warning {
+            color: #ffaa00;
+        }
+
+        .status-value.error {
+            color: #ff4444;
+        }
+
+        /* 說明提示 */
+        .hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 20, 50, 0.9);
+            padding: 15px 30px;
+            border-radius: 30px;
+            color: white;
+            font-size: 16px;
+            z-index: 100;
+            border: 2px solid rgba(255, 0, 255, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+
+        /* 載入畫面 */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a20;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+
+        .loading-bar {
+            width: 300px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .loading-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #ff00ff, #00ffff);
+            width: 0%;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <!-- 載入畫面 -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-text">正在載入星海粒子系統...</div>
+        <div class="loading-bar">
+            <div class="loading-progress" id="loadingProgress"></div>
+        </div>
+    </div>
+
+    <!-- 粒子畫布 -->
+    <canvas id="particleCanvas"></canvas>
+
+    <!-- 攝影機預覽 -->
+    <video id="webcamPreview" autoplay playsinline></video>
+
+    <!-- 控制面板 -->
+    <div class="control-panel">
+        <h2>星海粒子控制台</h2>
+
+        <!-- 主題切換 -->
+        <div class="control-group">
+            <label>視覺主題</label>
+            <div class="theme-buttons">
+                <button class="theme-btn space-btn active" onclick="setTheme('space')">
+                    太空星塵
+                </button>
+                <button class="theme-btn ocean-btn" onclick="setTheme('ocean')">
+                    深海微光
+                </button>
+            </div>
+        </div>
+
+        <!-- 粒子數量 -->
+        <div class="control-group">
+            <label>粒子數量</label>
+            <input type="range" id="particleCount" min="5000" max="50000" value="20000" onchange="updateParticleCount(this.value)">
+            <div class="value-display" id="particleCountDisplay">20,000 顆</div>
+        </div>
+
+        <!-- 粒子大小 -->
+        <div class="control-group">
+            <label>粒子大小</label>
+            <input type="range" id="particleSize" min="1" max="10" value="3" step="0.5" onchange="updateParticleSize(this.value)">
+            <div class="value-display" id="particleSizeDisplay">3 px</div>
+        </div>
+
+        <!-- 吸引力強度 -->
+        <div class="control-group">
+            <label>手勢吸引力</label>
+            <input type="range" id="attractForce" min="0.01" max="0.2" value="0.05" step="0.01" onchange="updateAttractForce(this.value)">
+            <div class="value-display" id="attractForceDisplay">0.05</div>
+        </div>
+
+        <!-- 文字顯示 -->
+        <div class="control-group">
+            <label>粒子文字（按 Enter 套用）</label>
+            <input type="text" class="text-input" id="textInput" placeholder="輸入要顯示的文字..." maxlength="10">
+            <button class="apply-btn" onclick="applyText()">套用文字</button>
+        </div>
+
+        <!-- 狀態顯示 -->
+        <div class="status">
+            <div class="status-item">
+                <span>手勢偵測</span>
+                <span class="status-value" id="handStatus">等待中...</span>
+            </div>
+            <div class="status-item">
+                <span>FPS</span>
+                <span class="status-value" id="fpsDisplay">--</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作提示 -->
+    <div class="hint" id="hint">
+        將手放入畫面中，用手指控制粒子移動
+    </div>
+
+    <!-- MediaPipe Hands -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js"></script>
+
+    <script>
+        // ============================================
+        // 全域變數設定
+        // ============================================
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        const video = document.getElementById('webcamPreview');
+
+        // 粒子系統參數
+        let particles = [];
+        let particleCount = 20000;
+        let particleSize = 3;
+        let attractForce = 0.05;
+
+        // 手部追蹤資料
+        let handPositions = [];
+
+        // 主題設定
+        const themes = {
+            space: {
+                background: '#0a0a20',
+                colors: ['#ffffff', '#88ccff', '#ff88cc', '#aaddff'],
+                glowColor: 'rgba(100, 150, 255, 0.3)',
+                name: '太空星塵'
+            },
+            ocean: {
+                background: '#001a1a',
+                colors: ['#00ff88', '#00ffff', '#0088ff', '#00ffaa'],
+                glowColor: 'rgba(0, 255, 150, 0.3)',
+                name: '深海微光'
+            }
+        };
+        let currentTheme = 'space';
+
+        // 文字目標點
+        let textTargets = [];
+
+        // 效能監測
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let fps = 0;
+
+        // ============================================
+        // 初始化函數
+        // ============================================
+        async function init() {
+            updateLoadingProgress(10);
+
+            // 設定畫布大小
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            updateLoadingProgress(20);
+
+            // 初始化粒子
+            initParticles();
+
+            updateLoadingProgress(40);
+
+            // 初始化手勢偵測
+            await initHandTracking();
+
+            updateLoadingProgress(80);
+
+            // 開始動畫循環
+            animate();
+
+            updateLoadingProgress(100);
+
+            // 隱藏載入畫面
+            setTimeout(() => {
+                document.getElementById('loadingScreen').style.display = 'none';
+            }, 500);
+        }
+
+        function updateLoadingProgress(percent) {
+            document.getElementById('loadingProgress').style.width = percent + '%';
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        // ============================================
+        // 粒子系統
+        // ============================================
+        function initParticles() {
+            particles = [];
+            const theme = themes[currentTheme];
+
+            for (let i = 0; i < particleCount; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5,
+                    color: theme.colors[Math.floor(Math.random() * theme.colors.length)],
+                    size: Math.random() * particleSize + 1,
+                    targetX: null,
+                    targetY: null
+                });
+            }
+        }
+
+        function updateParticles() {
+            const theme = themes[currentTheme];
+
+            particles.forEach((p, index) => {
+                // 如果有文字目標點
+                if (textTargets.length > 0 && index < textTargets.length) {
+                    const target = textTargets[index];
+                    p.targetX = target.x;
+                    p.targetY = target.y;
+                }
+
+                // 計算吸引力
+                let ax = 0, ay = 0;
+
+                // 手部吸引力
+                handPositions.forEach(hand => {
+                    const dx = hand.x - p.x;
+                    const dy = hand.y - p.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < 300 && dist > 10) {
+                        const force = attractForce * (1 - dist / 300);
+                        ax += (dx / dist) * force * 50;
+                        ay += (dy / dist) * force * 50;
+                    }
+                });
+
+                // 文字目標吸引力
+                if (p.targetX !== null && handPositions.length === 0) {
+                    const dx = p.targetX - p.x;
+                    const dy = p.targetY - p.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist > 1) {
+                        ax += dx * 0.02;
+                        ay += dy * 0.02;
+                    }
+                }
+
+                // 更新速度
+                p.vx += ax;
+                p.vy += ay;
+
+                // 速度阻尼
+                p.vx *= 0.95;
+                p.vy *= 0.95;
+
+                // 隨機漂移
+                p.vx += (Math.random() - 0.5) * 0.1;
+                p.vy += (Math.random() - 0.5) * 0.1;
+
+                // 更新位置
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // 邊界處理
+                if (p.x < 0) p.x = canvas.width;
+                if (p.x > canvas.width) p.x = 0;
+                if (p.y < 0) p.y = canvas.height;
+                if (p.y > canvas.height) p.y = 0;
+            });
+        }
+
+        function drawParticles() {
+            const theme = themes[currentTheme];
+
+            // 清空畫布（帶拖尾效果）
+            ctx.fillStyle = theme.background;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 繪製粒子
+            particles.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+
+                // 發光效果
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = p.color;
+            });
+
+            // 繪製手部位置指示
+            ctx.shadowBlur = 0;
+            handPositions.forEach(hand => {
+                ctx.beginPath();
+                ctx.arc(hand.x, hand.y, 30, 0, Math.PI * 2);
+                ctx.strokeStyle = theme.glowColor;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // 發光圈
+                const gradient = ctx.createRadialGradient(
+                    hand.x, hand.y, 0,
+                    hand.x, hand.y, 80
+                );
+                gradient.addColorStop(0, theme.glowColor);
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            });
+        }
+
+        // ============================================
+        // 手勢追蹤
+        // ============================================
+        async function initHandTracking() {
+            const hands = new Hands({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${file}`;
+                }
+            });
+
+            hands.setOptions({
+                maxNumHands: 2,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.7,
+                minTrackingConfidence: 0.5
+            });
+
+            hands.onResults(onHandResults);
+
+            // 啟動攝影機
+            const camera = new Camera(video, {
+                onFrame: async () => {
+                    await hands.send({ image: video });
+                },
+                width: 640,
+                height: 480
+            });
+
+            await camera.start();
+            document.getElementById('handStatus').textContent = '已啟動';
+            document.getElementById('handStatus').classList.remove('error');
+        }
+
+        function onHandResults(results) {
+            handPositions = [];
+
+            if (results.multiHandLandmarks) {
+                results.multiHandLandmarks.forEach(landmarks => {
+                    // 取得食指指尖 (index 8)
+                    const indexTip = landmarks[8];
+
+                    // 轉換座標（鏡像翻轉）
+                    const x = (1 - indexTip.x) * canvas.width;
+                    const y = indexTip.y * canvas.height;
+
+                    handPositions.push({ x, y });
+                });
+
+                // 更新狀態
+                document.getElementById('handStatus').textContent =
+                    `偵測到 ${handPositions.length} 隻手`;
+                document.getElementById('hint').style.display = 'none';
+            } else {
+                document.getElementById('handStatus').textContent = '未偵測到手';
+                document.getElementById('hint').style.display = 'block';
+            }
+        }
+
+        // ============================================
+        // 動畫循環
+        // ============================================
+        function animate() {
+            updateParticles();
+            drawParticles();
+            updateFPS();
+            requestAnimationFrame(animate);
+        }
+
+        function updateFPS() {
+            frameCount++;
+            const now = performance.now();
+
+            if (now - lastTime >= 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastTime = now;
+                document.getElementById('fpsDisplay').textContent = fps + ' FPS';
+
+                // FPS 警告
+                const fpsElement = document.getElementById('fpsDisplay');
+                if (fps < 30) {
+                    fpsElement.classList.add('warning');
+                } else {
+                    fpsElement.classList.remove('warning');
+                }
+            }
+        }
+
+        // ============================================
+        // 控制功能
+        // ============================================
+        function setTheme(themeName) {
+            currentTheme = themeName;
+
+            // 更新粒子顏色
+            const theme = themes[themeName];
+            particles.forEach(p => {
+                p.color = theme.colors[Math.floor(Math.random() * theme.colors.length)];
+            });
+
+            // 更新按鈕狀態
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`.${themeName}-btn`).classList.add('active');
+        }
+
+        function updateParticleCount(value) {
+            particleCount = parseInt(value);
+            document.getElementById('particleCountDisplay').textContent =
+                particleCount.toLocaleString() + ' 顆';
+            initParticles();
+        }
+
+        function updateParticleSize(value) {
+            particleSize = parseFloat(value);
+            document.getElementById('particleSizeDisplay').textContent = value + ' px';
+            particles.forEach(p => {
+                p.size = Math.random() * particleSize + 1;
+            });
+        }
+
+        function updateAttractForce(value) {
+            attractForce = parseFloat(value);
+            document.getElementById('attractForceDisplay').textContent = value;
+        }
+
+        function applyText() {
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) {
+                textTargets = [];
+                return;
+            }
+
+            // 創建離屏 Canvas 來繪製文字
+            const offCanvas = document.createElement('canvas');
+            const offCtx = offCanvas.getContext('2d');
+            offCanvas.width = canvas.width;
+            offCanvas.height = canvas.height;
+
+            // 繪製文字
+            offCtx.fillStyle = '#ffffff';
+            offCtx.font = 'bold 200px Microsoft JhengHei';
+            offCtx.textAlign = 'center';
+            offCtx.textBaseline = 'middle';
+            offCtx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+            // 取得像素資料
+            const imageData = offCtx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            // 找出文字的像素位置
+            textTargets = [];
+            const step = 6; // 取樣間隔
+
+            for (let y = 0; y < canvas.height; y += step) {
+                for (let x = 0; x < canvas.width; x += step) {
+                    const index = (y * canvas.width + x) * 4;
+                    if (data[index + 3] > 128) { // Alpha > 128
+                        textTargets.push({ x, y });
+                    }
+                }
+            }
+
+            console.log(`文字包含 ${textTargets.length} 個目標點`);
+        }
+
+        // 鍵盤事件
+        document.getElementById('textInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                applyText();
+            }
+        });
+
+        // ============================================
+        // 啟動
+        // ============================================
+        init();
+    </script>
+</body>
+</html>

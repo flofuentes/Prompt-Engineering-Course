@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>提示詞工程實戰教學 - 完整課程</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a237e 50%, #283593 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* 星空背景效果 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(2px 2px at 20px 30px, white, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 90px 40px, white, transparent),
+                radial-gradient(2px 2px at 160px 120px, rgba(255,255,255,0.9), transparent),
+                radial-gradient(1px 1px at 230px 80px, white, transparent),
+                radial-gradient(2px 2px at 300px 150px, rgba(255,255,255,0.7), transparent);
+            background-size: 550px 250px;
+            animation: twinkle 8s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+            animation: fadeInDown 1s ease;
+        }
+
+        .header h1 {
+            font-size: 52px;
+            margin-bottom: 15px;
+            text-shadow: 0 4px 20px rgba(100, 181, 246, 0.5);
+            font-weight: 800;
+            background: linear-gradient(90deg, #64b5f6, #81d4fa, #4fc3f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 24px;
+            opacity: 0.95;
+            font-weight: 300;
+            letter-spacing: 2px;
+            color: #b3e5fc;
+        }
+
+        .header .course-info {
+            margin-top: 20px;
+            font-size: 16px;
+            opacity: 0.85;
+            line-height: 1.8;
+            color: #e1f5fe;
+        }
+
+        .course-duration {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.15);
+            padding: 10px 25px;
+            border-radius: 30px;
+            margin-top: 20px;
+            font-size: 16px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        /* 時間軸 */
+        .timeline {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 25px;
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+        }
+
+        .timeline h2 {
+            color: #1a237e;
+            font-size: 28px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .timeline-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .time-slot {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            padding: 15px 20px;
+            border-radius: 12px;
+            text-align: center;
+            border-left: 4px solid #1976d2;
+        }
+
+        .time-slot .time {
+            font-size: 14px;
+            color: #1565c0;
+            font-weight: 600;
+        }
+
+        .time-slot .content {
+            font-size: 15px;
+            color: #333;
+            margin-top: 5px;
+        }
+
+        /* 課程區塊 */
+        .main-section {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 25px;
+            padding: 40px;
+            margin-bottom: 35px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+            transition: transform 0.3s ease;
+        }
+
+        .main-section:hover {
+            transform: translateY(-3px);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 18px;
+            border-bottom: 3px solid #1a237e;
+        }
+
+        .section-icon {
+            font-size: 42px;
+        }
+
+        .section-info {
+            flex: 1;
+        }
+
+        .section-title {
+            font-size: 30px;
+            margin-bottom: 5px;
+            font-weight: 700;
+            color: #1a237e;
+        }
+
+        .section-subtitle {
+            font-size: 16px;
+            opacity: 0.7;
+            color: #3949ab;
+        }
+
+        .section-time {
+            background: #e8eaf6;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #3949ab;
+            font-weight: 600;
+        }
+
+        .section-description {
+            background: linear-gradient(135deg, rgba(26, 35, 126, 0.06), rgba(57, 73, 171, 0.06));
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border-left: 4px solid #1a237e;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #333;
+        }
+
+        .parts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 18px;
+        }
+
+        .part-card {
+            background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%);
+            border-radius: 15px;
+            padding: 22px;
+            text-decoration: none;
+            color: white;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(26, 35, 126, 0.35);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .part-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .part-card:hover::before {
+            opacity: 1;
+        }
+
+        .part-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 15px 40px rgba(26, 35, 126, 0.45);
+        }
+
+        .part-card.text { background: linear-gradient(135deg, #00695c, #00897b); }
+        .part-card.image { background: linear-gradient(135deg, #ad1457, #d81b60); }
+        .part-card.space { background: linear-gradient(135deg, #0d47a1, #1565c0); }
+        .part-card.ocean { background: linear-gradient(135deg, #006064, #00838f); }
+        .part-card.project { background: linear-gradient(135deg, #4a148c, #7b1fa2); }
+
+        .part-number {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .part-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .part-desc {
+            font-size: 13px;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+
+        .part-duration {
+            margin-top: 12px;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        /* 學習成果 */
+        .outcomes {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 25px;
+            padding: 40px;
+            margin-bottom: 35px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+        }
+
+        .outcomes h2 {
+            color: #1a237e;
+            font-size: 26px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .outcome-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .outcome-item {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 15px;
+            border-left: 4px solid #4caf50;
+        }
+
+        .outcome-item h4 {
+            color: #2e7d32;
+            margin-bottom: 8px;
+            font-size: 17px;
+        }
+
+        .outcome-item p {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 50px;
+            padding: 35px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 25px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .footer h3 {
+            font-size: 24px;
+            margin-bottom: 12px;
+            color: #81d4fa;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .footer-link {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 15px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .footer-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 32px; }
+            .header p { font-size: 18px; }
+            .main-section { padding: 25px; }
+            .section-header { flex-direction: column; text-align: center; }
+            .parts-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Prompt Engineering</h1>
+            <p>提示詞工程實戰教學</p>
+            <div class="course-info">
+                掌握與 AI 對話的藝術，從文案、教案、圖像到互動專案
+            </div>
+        </div>
+
+        <!-- Part 1: 提示詞工程基礎 -->
+        <div class="main-section">
+            <div class="section-header">
+                <div class="section-icon">AI</div>
+                <div class="section-info">
+                    <h2 class="section-title">Part 1：提示詞工程基礎</h2>
+                    <p class="section-subtitle">Prompt Engineering Fundamentals</p>
+                </div>
+            </div>
+            <div class="section-description">
+                從零開始學習提示詞工程的核心概念。了解提示詞的結構、撰寫技巧、常見模式，以及如何與不同 AI 工具有效溝通。這是所有後續實作的基礎。
+            </div>
+            <div class="parts-grid">
+                <a href="Part1-1_提示詞基本概念.html" class="part-card">
+                    <div class="part-number">1-1</div>
+                    <div class="part-title">提示詞基本概念</div>
+                    <div class="part-desc">什麼是提示詞工程？為什麼它如此重要？</div>
+                </a>
+                <a href="Part1-2_提示詞結構與技巧.html" class="part-card">
+                    <div class="part-number">1-2</div>
+                    <div class="part-title">提示詞結構與技巧</div>
+                    <div class="part-desc">角色、任務、格式、限制的完整框架</div>
+                </a>
+                <a href="Part1-3_進階提示詞模式.html" class="part-card">
+                    <div class="part-number">1-3</div>
+                    <div class="part-title">進階提示詞模式</div>
+                    <div class="part-desc">Few-shot、Chain of Thought、Self-consistency</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Part 2: 文案與教案 -->
+        <div class="main-section">
+            <div class="section-header">
+                <div class="section-icon">Doc</div>
+                <div class="section-info">
+                    <h2 class="section-title">Part 2：文案與教案提示詞</h2>
+                    <p class="section-subtitle">Text Content Generation</p>
+                </div>
+            </div>
+            <div class="section-description">
+                學習如何運用提示詞生成各類文字內容，包括行銷文案、社群貼文、教學教案、學習單等。每個主題都附有可直接使用的模板。
+            </div>
+            <div class="parts-grid">
+                <a href="Part2-1_文案撰寫提示詞.html" class="part-card text">
+                    <div class="part-number">2-1</div>
+                    <div class="part-title">文案撰寫提示詞</div>
+                    <div class="part-desc">行銷文案、社群貼文、Email 範本</div>
+                </a>
+                <a href="Part2-2_教案設計提示詞.html" class="part-card text">
+                    <div class="part-number">2-2</div>
+                    <div class="part-title">教案設計提示詞</div>
+                    <div class="part-desc">課程大綱、教學活動、評量設計</div>
+                </a>
+                <a href="Part2-3_學習單生成提示詞.html" class="part-card text">
+                    <div class="part-number">2-3</div>
+                    <div class="part-title">學習單生成提示詞</div>
+                    <div class="part-desc">差異化學習單、評量題目、回饋語</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Part 3: 圖像生成 -->
+        <div class="main-section">
+            <div class="section-header">
+                <div class="section-icon">Image</div>
+                <div class="section-info">
+                    <h2 class="section-title">Part 3：圖像生成提示詞</h2>
+                    <p class="section-subtitle">Image Generation Prompts</p>
+                </div>
+            </div>
+            <div class="section-description">
+                掌握 AI 圖像生成工具（如 Midjourney、DALL-E、Stable Diffusion）的提示詞撰寫技巧，創造教學素材、簡報圖片、社群視覺等。
+            </div>
+            <div class="parts-grid">
+                <a href="Part3-1_圖像提示詞基礎.html" class="part-card image">
+                    <div class="part-number">3-1</div>
+                    <div class="part-title">圖像提示詞基礎</div>
+                    <div class="part-desc">主題、風格、構圖、光線的描述技巧</div>
+                </a>
+                <a href="Part3-2_教學素材圖像生成.html" class="part-card image">
+                    <div class="part-number">3-2</div>
+                    <div class="part-title">教學素材圖像生成</div>
+                    <div class="part-desc">太空、海洋、科學主題圖片製作</div>
+                </a>
+                <a href="Part3-3_簡報與社群圖像.html" class="part-card image">
+                    <div class="part-number">3-3</div>
+                    <div class="part-title">簡報與社群圖像</div>
+                    <div class="part-desc">封面設計、資訊圖表、社群貼圖</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Part 4: 太空海洋教學備課 -->
+        <div class="main-section">
+            <div class="section-header">
+                <div class="section-icon">Teach</div>
+                <div class="section-info">
+                    <h2 class="section-title">Part 4：太空與海洋教學備課</h2>
+                    <p class="section-subtitle">Space & Ocean Teaching Preparation</p>
+                </div>
+            </div>
+            <div class="section-description">
+                綜合應用所有提示詞技巧，進行完整的太空探測與海洋觀測主題教學備課。從目標拆解、課程設計到差異化教學的完整流程。
+            </div>
+            <div class="parts-grid">
+                <a href="Part4-1_教學目標與課程設計.html" class="part-card space">
+                    <div class="part-number">4-1</div>
+                    <div class="part-title">教學目標與課程設計</div>
+                    <div class="part-desc">目標拆解、情境式課程流程規劃</div>
+                </a>
+                <a href="Part4-2_太空探測主題實作.html" class="part-card space">
+                    <div class="part-number">4-2</div>
+                    <div class="part-title">太空探測主題實作</div>
+                    <div class="part-desc">火星任務、衛星科技教學資源生成</div>
+                </a>
+                <a href="Part4-3_海洋觀測主題實作.html" class="part-card ocean">
+                    <div class="part-number">4-3</div>
+                    <div class="part-title">海洋觀測主題實作</div>
+                    <div class="part-desc">深海探測、海洋生態教學資源生成</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Part 5: 星海粒子互動專案 -->
+        <div class="main-section">
+            <div class="section-header">
+                <div class="section-icon">Star</div>
+                <div class="section-info">
+                    <h2 class="section-title">Part 5：星海粒子互動專案</h2>
+                    <p class="section-subtitle">Interactive Particle Project</p>
+                </div>
+            </div>
+            <div class="section-description">
+                運用 AI 協助開發一個手勢控制的粒子互動系統，結合太空星塵與深海微光主題。完整的專案實作，從架構設計到程式碼撰寫。
+            </div>
+            <div class="parts-grid">
+                <a href="Part5-1_專案規劃與架構.html" class="part-card project">
+                    <div class="part-number">5-1</div>
+                    <div class="part-title">專案規劃與架構</div>
+                    <div class="part-desc">功能設計、技術選型、AI 輔助開發</div>
+                </a>
+                <a href="Part5-2_手勢追蹤實作.html" class="part-card project">
+                    <div class="part-number">5-2</div>
+                    <div class="part-title">手勢追蹤實作</div>
+                    <div class="part-desc">MediaPipe 設定、座標處理</div>
+                </a>
+                <a href="Part5-3_粒子系統與主題.html" class="part-card project">
+                    <div class="part-number">5-3</div>
+                    <div class="part-title">粒子系統與主題</div>
+                    <div class="part-desc">Canvas 繪圖、太空海洋主題切換</div>
+                </a>
+                <a href="星海粒子Demo/index.html" class="part-card project" target="_blank">
+                    <div class="part-number">Demo</div>
+                    <div class="part-title">完整 Demo 體驗</div>
+                    <div class="part-desc">開啟可運行的互動專案</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- 學習成果 -->
+        <div class="outcomes">
+            <h2>課程學習成果</h2>
+            <div class="outcome-grid">
+                <div class="outcome-item">
+                    <h4>掌握提示詞框架</h4>
+                    <p>學會 ROLE-TASK-FORMAT-CONSTRAINT 等結構化提示詞撰寫方法</p>
+                </div>
+                <div class="outcome-item">
+                    <h4>文字內容生成</h4>
+                    <p>能夠生成高品質的文案、教案、學習單等文字內容</p>
+                </div>
+                <div class="outcome-item">
+                    <h4>圖像提示詞撰寫</h4>
+                    <p>掌握 AI 圖像生成工具的提示詞技巧</p>
+                </div>
+                <div class="outcome-item">
+                    <h4>教學備課效率</h4>
+                    <p>運用 AI 快速完成太空海洋主題的完整教學準備</p>
+                </div>
+                <div class="outcome-item">
+                    <h4>互動專案開發</h4>
+                    <p>完成一個手勢控制的粒子互動系統</p>
+                </div>
+                <div class="outcome-item">
+                    <h4>建立 Prompt 庫</h4>
+                    <p>累積可重複使用的提示詞模板資料庫</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第二次課程連結 -->
+        <div class="main-section" style="background: linear-gradient(135deg, rgba(0, 150, 136, 0.95), rgba(0, 121, 107, 0.95)); text-align: center;">
+            <div class="section-header" style="justify-content: center; border-bottom: 3px solid rgba(255,255,255,0.3);">
+                <div class="section-icon" style="color: white;">🚀</div>
+                <div class="section-info">
+                    <h2 class="section-title" style="color: white;">第二次課程</h2>
+                    <p class="section-subtitle" style="color: #b2dfdb;">AI 協作學習單與評量設計</p>
+                </div>
+            </div>
+            <div class="section-description" style="background: rgba(255,255,255,0.15); border-left-color: #a5d6a7; color: white;">
+                延續第一次課程，深入學習 AI 協作的評量網站設計、LINE Bot 語音回饋系統開發，實現完整的 AI 輔助教學評量流程。
+            </div>
+            <a href="index2.html" class="footer-link" style="display: inline-block; background: white; color: #00796b; font-size: 18px; padding: 15px 40px;">
+                進入第二次課程 →
+            </a>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <h3>課程資源連結</h3>
+            <p>Course Resources & Community</p>
+            <div class="footer-links">
+                <a href="https://www.facebook.com/?locale=zh_TW" target="_blank" class="footer-link">Facebook</a>
+                <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="footer-link">YouTube</a>
+                <a href="https://www.facebook.com/groups/2754139931432955?locale=zh_TW" target="_blank" class="footer-link">3A 社團</a>
+            </div>
+            <p style="margin-top: 30px; opacity: 0.8; font-size: 14px;">
+                © 2026 阿亮老師 版權所有 | 本專案僅供課程學員學習使用
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // 滾動進度條
+        window.addEventListener('scroll', () => {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = height > 0 ? (winScroll / height) * 100 : 0;
+            // 可加入進度條顯示
+        });
+    </script>
+</body>
+</html>

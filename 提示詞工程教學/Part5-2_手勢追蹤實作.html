@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Part 5-2：手勢追蹤實作 - 提示詞工程教學</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #ffffff;
+        }
+
+        .nav-header {
+            background: rgba(123, 31, 162, 0.9);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .nav-links a:hover,
+        .nav-links button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-links button {
+            color: white;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: inherit;
+            transition: background 0.3s;
+        }
+
+        .slide-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 100px 2rem 2rem;
+        }
+
+        .slide {
+            display: none;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 3rem;
+            min-height: 70vh;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(156, 39, 176, 0.3);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide-title {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #ce93d8, #ba68c8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .slide-content {
+            font-size: 1.2rem;
+            line-height: 1.8;
+        }
+
+        .code-block {
+            background: #1e1e3f;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.95rem;
+            overflow-x: auto;
+            border-left: 4px solid #9c27b0;
+            position: relative;
+        }
+
+        .code-block::before {
+            content: attr(data-lang);
+            position: absolute;
+            top: 0.5rem;
+            right: 1rem;
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .code-block code {
+            color: #e0e0e0;
+            white-space: pre;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 4rem;
+            background: #9c27b0;
+            color: white;
+            border: none;
+            padding: 0.3rem 0.8rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+        }
+
+        .copy-btn:hover {
+            background: #7b1fa2;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(156, 39, 176, 0.2), rgba(186, 104, 200, 0.1));
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid #9c27b0;
+        }
+
+        .step-card {
+            background: rgba(156, 39, 176, 0.15);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            display: flex;
+            gap: 1.5rem;
+            align-items: flex-start;
+        }
+
+        .step-number {
+            background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .step-content h4 {
+            color: #ce93d8;
+            margin-bottom: 0.5rem;
+            font-size: 1.3rem;
+        }
+
+        .api-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border: 1px solid rgba(156, 39, 176, 0.3);
+        }
+
+        .api-card h4 {
+            color: #ba68c8;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .property-list {
+            display: grid;
+            gap: 0.8rem;
+        }
+
+        .property-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .property-name {
+            background: #7b1fa2;
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 5px;
+            font-family: monospace;
+            min-width: 150px;
+        }
+
+        .landmark-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .landmark-item {
+            background: rgba(156, 39, 176, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .landmark-index {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ce93d8;
+        }
+
+        .landmark-name {
+            color: #e0e0e0;
+            font-size: 0.9rem;
+        }
+
+        .flow-diagram {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .flow-box {
+            background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            font-weight: bold;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .flow-arrow {
+            color: #ce93d8;
+            font-size: 1.5rem;
+        }
+
+        .warning-box {
+            background: rgba(255, 152, 0, 0.2);
+            border-left: 4px solid #ff9800;
+            padding: 1.5rem;
+            border-radius: 0 10px 10px 0;
+            margin: 1.5rem 0;
+        }
+
+        .warning-box h4 {
+            color: #ffb74d;
+            margin-bottom: 0.5rem;
+        }
+
+        .tip-box {
+            background: rgba(76, 175, 80, 0.2);
+            border-left: 4px solid #4caf50;
+            padding: 1.5rem;
+            border-radius: 0 10px 10px 0;
+            margin: 1.5rem 0;
+        }
+
+        .tip-box h4 {
+            color: #81c784;
+            margin-bottom: 0.5rem;
+        }
+
+        .prompt-template {
+            background: linear-gradient(135deg, rgba(103, 58, 183, 0.3), rgba(156, 39, 176, 0.2));
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            border: 1px solid rgba(156, 39, 176, 0.4);
+        }
+
+        .prompt-template h4 {
+            color: #ce93d8;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .prompt-content {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1.5rem;
+            border-radius: 10px;
+            font-family: 'Consolas', monospace;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(156, 39, 176, 0.3);
+        }
+
+        .comparison-table th {
+            background: rgba(156, 39, 176, 0.3);
+            color: #ce93d8;
+        }
+
+        .comparison-table tr:hover {
+            background: rgba(156, 39, 176, 0.1);
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 左右箭頭導航 */
+        .nav-arrow {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(123, 31, 162, 0.8);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px solid rgba(206, 147, 216, 0.5);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 9000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-arrow:hover {
+            background: rgba(156, 39, 176, 0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+        .prev-arrow { left: 30px; }
+        .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .slide-number {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(123, 31, 162, 0.8);
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-size: 16px;
+            z-index: 9000;
+            color: #ce93d8;
+        }
+
+        .tag {
+            display: inline-block;
+            background: rgba(156, 39, 176, 0.3);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin: 0.2rem;
+        }
+
+        ul, ol {
+            margin-left: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.8rem;
+        }
+
+        .input-wrapper {
+            position: relative;
+            margin-top: 10px;
+        }
+
+        .practice-input {
+            width: 100%;
+            min-height: 80px;
+            padding: 15px;
+            padding-right: 70px;
+            border: 2px dashed #ff9800;
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            resize: vertical;
+            background: #fff;
+        }
+
+        .practice-input:focus {
+            outline: none;
+            border-color: #f57c00;
+            box-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
+        }
+
+        .copy-input-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .copy-input-btn:hover {
+            background: linear-gradient(135deg, #f57c00, #ef6c00);
+            transform: scale(1.05);
+        }
+
+        .copy-input-btn.copied {
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-header">
+        <div class="nav-title">Part 5-2：手勢追蹤實作</div>
+        <div class="nav-links">
+            <a href="index.html">首頁</a>
+            <a href="Part5-1_專案規劃與架構.html">上一節</a>
+            <a href="Part5-3_粒子系統與主題.html">下一節</a>
+            <button class="fullscreen-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank">YT</a>
+        </div>
+    </nav>
+
+    <div class="slide-container">
+        <!-- Slide 1: 章節導覽 -->
+        <div class="slide active" id="slide1">
+            <h2 class="slide-title">📹 手勢追蹤實作</h2>
+            <div class="slide-content">
+                <div class="highlight-box">
+                    <h3>本節學習重點</h3>
+                    <p>深入學習 MediaPipe Hands API，實作即時手勢追蹤功能</p>
+                </div>
+
+                <div class="landmark-grid">
+                    <div class="landmark-item">
+                        <div class="landmark-index">5-2-1</div>
+                        <div class="landmark-name">MediaPipe 基礎設定</div>
+                    </div>
+                    <div class="landmark-item">
+                        <div class="landmark-index">5-2-2</div>
+                        <div class="landmark-name">手部關鍵點解析</div>
+                    </div>
+                    <div class="landmark-item">
+                        <div class="landmark-index">5-2-3</div>
+                        <div class="landmark-name">攝影機存取實作</div>
+                    </div>
+                    <div class="landmark-item">
+                        <div class="landmark-index">5-2-4</div>
+                        <div class="landmark-name">追蹤資料處理</div>
+                    </div>
+                </div>
+
+                <div class="tip-box">
+                    <h4>💡 AI 輔助開發提示</h4>
+                    <p>本節將示範如何運用提示詞，讓 AI 協助我們理解 API 文件、生成程式碼、除錯問題</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: MediaPipe Hands 介紹 -->
+        <div class="slide" id="slide2">
+            <h2 class="slide-title">🤚 MediaPipe Hands 介紹</h2>
+            <div class="slide-content">
+                <div class="highlight-box">
+                    <h3>什麼是 MediaPipe Hands？</h3>
+                    <p>Google 開發的機器學習解決方案，可即時追蹤手部 21 個關鍵點，支援網頁瀏覽器直接運行</p>
+                </div>
+
+                <h3 style="margin: 1.5rem 0 1rem; color: #ce93d8;">核心特點</h3>
+                <div class="two-column">
+                    <div class="api-card">
+                        <h4>技術優勢</h4>
+                        <ul>
+                            <li><strong>即時處理</strong>：30+ FPS 效能</li>
+                            <li><strong>高精準度</strong>：21 個關鍵點追蹤</li>
+                            <li><strong>多手支援</strong>：同時追蹤雙手</li>
+                            <li><strong>3D 座標</strong>：提供深度資訊</li>
+                        </ul>
+                    </div>
+                    <div class="api-card">
+                        <h4>應用場景</h4>
+                        <ul>
+                            <li><strong>手勢控制</strong>：互動介面操作</li>
+                            <li><strong>手語辨識</strong>：輔助溝通工具</li>
+                            <li><strong>AR/VR</strong>：虛擬物件互動</li>
+                            <li><strong>藝術創作</strong>：動態視覺效果</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="flow-diagram">
+                    <div class="flow-box">攝影機輸入</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">手部偵測</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">關鍵點追蹤</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">座標輸出</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 21 個手部關鍵點 -->
+        <div class="slide" id="slide3">
+            <h2 class="slide-title">✋ 21 個手部關鍵點</h2>
+            <div class="slide-content">
+                <div class="highlight-box">
+                    <h3>關鍵點索引說明</h3>
+                    <p>MediaPipe Hands 追蹤手部 21 個關鍵點，每個點都有唯一索引 (0-20)</p>
+                </div>
+
+                <div class="landmark-grid">
+                    <div class="landmark-item">
+                        <div class="landmark-index">0</div>
+                        <div class="landmark-name">WRIST 手腕</div>
+                    </div>
+                    <div class="landmark-item">
+                        <div class="landmark-index">4</div>
+                        <div class="landmark-name">THUMB_TIP 拇指尖</div>
+                    </div>
+                    <div class="landmark-item">
+                        <div class="landmark-index">8</div>
+                        <div class="landmark-name">INDEX_TIP 食指尖</div>
+                    </div>
+                    <div class="landmark-item">
+                        <div class="landmark-index">12</div>
+                        <div class="landmark-name">MIDDLE_TIP 中指尖</div>
+                    </div>
+                    <div class="landmark-item">
+                        <div class="landmark-index">16</div>
+                        <div class="landmark-name">RING_TIP 無名指尖</div>
+                    </div>
+                    <div class="landmark-item">
+                        <div class="landmark-index">20</div>
+                        <div class="landmark-name">PINKY_TIP 小指尖</div>
+                    </div>
+                </div>
+
+                <div class="api-card">
+                    <h4>每根手指的關鍵點結構</h4>
+                    <div class="property-list">
+                        <div class="property-item">
+                            <span class="property-name">MCP (1,5,9,13,17)</span>
+                            <span>掌指關節 - 手指根部</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-name">PIP (2,6,10,14,18)</span>
+                            <span>近端指間關節 - 第一節</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-name">DIP (3,7,11,15,19)</span>
+                            <span>遠端指間關節 - 第二節</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-name">TIP (4,8,12,16,20)</span>
+                            <span>指尖 - 手指末端</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tip-box">
+                    <h4>💡 實用技巧</h4>
+                    <p>星海粒子專案中，我們主要使用<strong>食指尖 (索引 8)</strong> 作為互動控制點，這是最直覺的操作方式</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 環境設定與引入 -->
+        <div class="slide" id="slide4">
+            <h2 class="slide-title">⚙️ 環境設定與引入</h2>
+            <div class="slide-content">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>引入 MediaPipe CDN</h4>
+                        <p>在 HTML 中加入必要的 Script 標籤</p>
+                    </div>
+                </div>
+
+                <div class="code-block" data-lang="HTML">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+                    <code>&lt;!-- MediaPipe Hands 核心函式庫 --&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.min.js"&gt;&lt;/script&gt;
+
+&lt;!-- MediaPipe Camera Utils --&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.min.js"&gt;&lt;/script&gt;
+
+&lt;!-- MediaPipe Drawing Utils (選用，用於除錯視覺化) --&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.min.js"&gt;&lt;/script&gt;</code>
+                </div>
+
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>HTML 結構準備</h4>
+                        <p>建立 video 元素和 canvas 畫布</p>
+                    </div>
+                </div>
+
+                <div class="code-block" data-lang="HTML">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+                    <code>&lt;!-- 攝影機視訊元素 (可隱藏) --&gt;
+&lt;video id="webcam" autoplay playsinline style="display: none;"&gt;&lt;/video&gt;
+
+&lt;!-- 主要繪製畫布 --&gt;
+&lt;canvas id="canvas"&gt;&lt;/canvas&gt;
+
+&lt;!-- 除錯用畫布 (開發時使用) --&gt;
+&lt;canvas id="debug-canvas" width="320" height="240"&gt;&lt;/canvas&gt;</code>
+                </div>
+
+                <div class="warning-box">
+                    <h4>⚠️ 注意事項</h4>
+                    <p>攝影機存取需要 HTTPS 或 localhost 環境，瀏覽器基於安全考量會阻擋非安全來源的攝影機存取</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: MediaPipe Hands 初始化 -->
+        <div class="slide" id="slide5">
+            <h2 class="slide-title">🚀 MediaPipe Hands 初始化</h2>
+            <div class="slide-content">
+                <div class="code-block" data-lang="JavaScript">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+                    <code>// 建立 MediaPipe Hands 實例
+const hands = new Hands({
+    locateFile: (file) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`;
+    }
+});
+
+// 設定追蹤參數
+hands.setOptions({
+    maxNumHands: 2,           // 最多追蹤幾隻手 (1-2)
+    modelComplexity: 1,       // 模型複雜度 (0:輕量, 1:標準)
+    minDetectionConfidence: 0.7,  // 偵測信心閾值
+    minTrackingConfidence: 0.5    // 追蹤信心閾值
+});
+
+// 設定結果回呼函式
+hands.onResults(onHandsResults);</code>
+                </div>
+
+                <h3 style="margin: 1.5rem 0 1rem; color: #ce93d8;">參數說明</h3>
+                <table class="comparison-table">
+                    <tr>
+                        <th>參數</th>
+                        <th>說明</th>
+                        <th>建議值</th>
+                    </tr>
+                    <tr>
+                        <td><code>maxNumHands</code></td>
+                        <td>同時追蹤的手部數量</td>
+                        <td>1（效能優先）或 2（功能優先）</td>
+                    </tr>
+                    <tr>
+                        <td><code>modelComplexity</code></td>
+                        <td>模型複雜度影響精準度與效能</td>
+                        <td>1（平衡）</td>
+                    </tr>
+                    <tr>
+                        <td><code>minDetectionConfidence</code></td>
+                        <td>手部偵測的最低信心值</td>
+                        <td>0.7（避免誤判）</td>
+                    </tr>
+                    <tr>
+                        <td><code>minTrackingConfidence</code></td>
+                        <td>追蹤持續的最低信心值</td>
+                        <td>0.5（維持穩定追蹤）</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Slide 6: 攝影機存取實作 -->
+        <div class="slide" id="slide6">
+            <h2 class="slide-title">📷 攝影機存取實作</h2>
+            <div class="slide-content">
+                <div class="highlight-box">
+                    <h3>使用 Camera Utils</h3>
+                    <p>MediaPipe 提供的 Camera 工具類別簡化了攝影機存取與畫面處理</p>
+                </div>
+
+                <div class="code-block" data-lang="JavaScript">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+                    <code>// 取得 video 元素
+const videoElement = document.getElementById('webcam');
+
+// 建立攝影機實例
+const camera = new Camera(videoElement, {
+    onFrame: async () => {
+        // 每一幀送入 MediaPipe 處理
+        await hands.send({ image: videoElement });
+    },
+    width: 1280,
+    height: 720
+});
+
+// 啟動攝影機
+camera.start()
+    .then(() => {
+        console.log('攝影機啟動成功');
+    })
+    .catch((error) => {
+        console.error('攝影機啟動失敗:', error);
+        showCameraError();
+    });</code>
+                </div>
+
+                <div class="step-card">
+                    <div class="step-number">!</div>
+                    <div class="step-content">
+                        <h4>原生 API 替代方案</h4>
+                        <p>如不使用 Camera Utils，也可用原生 getUserMedia</p>
+                    </div>
+                </div>
+
+                <div class="code-block" data-lang="JavaScript">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+                    <code>// 原生方式取得攝影機
+async function initCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                facingMode: 'user'  // 前置鏡頭
+            }
+        });
+        videoElement.srcObject = stream;
+
+        // 開始處理迴圈
+        videoElement.onloadedmetadata = () => {
+            processFrame();
+        };
+    } catch (error) {
+        handleCameraError(error);
+    }
+}
+
+function processFrame() {
+    hands.send({ image: videoElement });
+    requestAnimationFrame(processFrame);
+}</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: 結果處理函式 -->
+        <div class="slide" id="slide7">
+            <h2 class="slide-title">📊 結果處理函式</h2>
+            <div class="slide-content">
+                <div class="code-block" data-lang="JavaScript">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+                    <code>// 手部追蹤結果處理
+function onHandsResults(results) {
+    // results.image: 原始影像
+    // results.multiHandLandmarks: 所有手的關鍵點陣列
+    // results.multiHandedness: 左右手資訊
+
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        // 有偵測到手
+        for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+            const landmarks = results.multiHandLandmarks[i];
+            const handedness = results.multiHandedness[i];
+
+            // 取得食指尖座標 (索引 8)
+            const indexTip = landmarks[8];
+
+            // 座標轉換 (正規化 0-1 轉為畫布座標)
+            const x = indexTip.x * canvas.width;
+            const y = indexTip.y * canvas.height;
+            const z = indexTip.z;  // 深度資訊
+
+            // 更新粒子系統的目標位置
+            updateParticleTarget(x, y, z);
+
+            console.log(`${handedness.label} 手食指: (${x.toFixed(0)}, ${y.toFixed(0)})`);
+        }
+    } else {
+        // 未偵測到手
+        clearParticleTarget();
+    }
+}</code>
+                </div>
+
+                <div class="api-card">
+                    <h4>results 物件結構</h4>
+                    <div class="property-list">
+                        <div class="property-item">
+                            <span class="property-name">image</span>
+                            <span>原始輸入影像</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-name">multiHandLandmarks</span>
+                            <span>陣列，每隻手 21 個正規化座標點</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-name">multiHandedness</span>
+                            <span>陣列，包含 label (Left/Right) 和 score</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: 座標系統與鏡像處理 -->
+        <div class="slide" id="slide8">
+            <h2 class="slide-title">🔄 座標系統與鏡像處理</h2>
+            <div class="slide-content">
+                <div class="highlight-box">
+                    <h3>為什麼需要鏡像？</h3>
+                    <p>攝影機預設是正常視角（像照片），但使用者操作時期望像照鏡子一樣的反應</p>
+                </div>
+
+                <div class="two-column">
+                    <div class="api-card">
+                        <h4>原始座標</h4>
+                        <p>x: 0（左）→ 1（右）</p>
+                        <p>y: 0（上）→ 1（下）</p>
+                        <p>使用者舉右手 → 畫面左側</p>
+                    </div>
+                    <div class="api-card">
+                        <h4>鏡像座標</h4>
+                        <p>x: 1（左）→ 0（右）反轉</p>
+                        <p>y: 不變</p>
+                        <p>使用者舉右手 → 畫面右側</p>
+                    </div>
+                </div>
+
+                <div class="code-block" data-lang="JavaScript">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+                    <code>// 座標轉換函式
+function transformCoordinate(landmark, canvasWidth, canvasHeight, mirror = true) {
+    let x = landmark.x;
+    let y = landmark.y;
+    let z = landmark.z;
+
+    // 鏡像處理 (水平翻轉)
+    if (mirror) {
+        x = 1 - x;
+    }
+
+    // 轉換為畫布座標
+    return {
+        x: x * canvasWidth,
+        y: y * canvasHeight,
+        z: z  // z 保持原始值，表示深度
+    };
+}
+
+// 使用範例
+const indexTip = results.multiHandLandmarks[0][8];
+const position = transformCoordinate(indexTip, canvas.width, canvas.height, true);</code>
+                </div>
+
+                <div class="tip-box">
+                    <h4>💡 Z 軸深度應用</h4>
+                    <p>z 值表示手與攝影機的相對距離，可用於控制粒子大小或互動強度。z 值越小表示越靠近鏡頭</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: 平滑化與防抖動 -->
+        <div class="slide" id="slide9">
+            <h2 class="slide-title">🎯 平滑化與防抖動</h2>
+            <div class="slide-content">
+                <div class="highlight-box">
+                    <h3>為什麼需要平滑化？</h3>
+                    <p>原始追蹤資料會有微小抖動（Jitter），直接使用會讓粒子效果不穩定</p>
+                </div>
+
+                <div class="code-block" data-lang="JavaScript">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+                    <code>// 平滑化類別
+class PositionSmoother {
+    constructor(smoothingFactor = 0.3) {
+        this.smoothingFactor = smoothingFactor;
+        this.previousPosition = null;
+    }
+
+    // 指數移動平均 (EMA) 平滑
+    smooth(currentPosition) {
+        if (!this.previousPosition) {
+            this.previousPosition = { ...currentPosition };
+            return currentPosition;
+        }
+
+        const smoothed = {
+            x: this.lerp(this.previousPosition.x, currentPosition.x, this.smoothingFactor),
+            y: this.lerp(this.previousPosition.y, currentPosition.y, this.smoothingFactor),
+            z: this.lerp(this.previousPosition.z, currentPosition.z, this.smoothingFactor)
+        };
+
+        this.previousPosition = smoothed;
+        return smoothed;
+    }
+
+    // 線性插值
+    lerp(start, end, factor) {
+        return start + (end - start) * factor;
+    }
+
+    // 重置 (當手離開畫面時)
+    reset() {
+        this.previousPosition = null;
+    }
+}
+
+// 使用範例
+const smoother = new PositionSmoother(0.25);
+const smoothedPosition = smoother.smooth(rawPosition);</code>
+                </div>
+
+                <div class="api-card">
+                    <h4>smoothingFactor 參數調整</h4>
+                    <div class="property-list">
+                        <div class="property-item">
+                            <span class="property-name">0.1 - 0.2</span>
+                            <span>非常平滑，但反應較慢</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-name">0.25 - 0.35</span>
+                            <span>平衡選擇，適合多數場景</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-name">0.4 - 0.6</span>
+                            <span>反應快速，但抖動明顯</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: 手勢追蹤模組完整程式碼 -->
+        <div class="slide" id="slide10">
+            <h2 class="slide-title">📦 手勢追蹤模組完整程式碼</h2>
+            <div class="slide-content">
+                <div class="code-block" data-lang="JavaScript">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+                    <code>// HandTracker.js - 手勢追蹤模組
+class HandTracker {
+    constructor(options = {}) {
+        this.videoElement = options.videoElement;
+        this.onUpdate = options.onUpdate || (() => {});
+        this.onLost = options.onLost || (() => {});
+
+        this.hands = null;
+        this.camera = null;
+        this.smoother = new PositionSmoother(options.smoothing || 0.25);
+        this.isTracking = false;
+        this.mirror = options.mirror !== false;
+    }
+
+    async init() {
+        // 初始化 MediaPipe Hands
+        this.hands = new Hands({
+            locateFile: (file) =>
+                `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`
+        });
+
+        this.hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.5
+        });
+
+        this.hands.onResults((results) => this.handleResults(results));
+
+        // 初始化攝影機
+        this.camera = new Camera(this.videoElement, {
+            onFrame: async () => {
+                await this.hands.send({ image: this.videoElement });
+            },
+            width: 1280,
+            height: 720
+        });
+    }
+
+    async start() {
+        await this.camera.start();
+        this.isTracking = true;
+    }
+
+    stop() {
+        this.camera.stop();
+        this.isTracking = false;
+    }
+
+    handleResults(results) {
+        if (results.multiHandLandmarks?.length > 0) {
+            const landmark = results.multiHandLandmarks[0][8];
+            const position = this.transformAndSmooth(landmark);
+            this.onUpdate(position);
+        } else {
+            this.smoother.reset();
+            this.onLost();
+        }
+    }
+
+    transformAndSmooth(landmark) {
+        let x = this.mirror ? 1 - landmark.x : landmark.x;
+        const raw = { x, y: landmark.y, z: landmark.z };
+        return this.smoother.smooth(raw);
+    }
+}</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: AI 輔助開發提示詞 -->
+        <div class="slide" id="slide11">
+            <h2 class="slide-title">🤖 AI 輔助開發提示詞</h2>
+            <div class="slide-content">
+                <div class="prompt-template">
+                    <h4>🔧 程式碼除錯提示詞</h4>
+                    <div class="prompt-content">你是一位 MediaPipe 專家。我正在開發手勢追蹤功能，遇到以下問題：
+
+[錯誤訊息]
+{貼上 console 錯誤}
+
+[相關程式碼]
+{貼上相關程式碼片段}
+
+[預期行為]
+{描述你期望的結果}
+
+[實際行為]
+{描述實際發生的情況}
+
+請分析可能的原因並提供修正方案。</div>
+                </div>
+
+                <div class="prompt-template">
+                    <h4>📚 API 理解提示詞</h4>
+                    <div class="prompt-content">請詳細解釋 MediaPipe Hands 的 {API 名稱} 功能：
+
+1. 這個功能的作用是什麼？
+2. 接受哪些參數？每個參數的意義？
+3. 回傳值的結構是什麼？
+4. 請提供一個實用的程式碼範例
+5. 有哪些常見的使用場景？
+6. 使用時有什麼注意事項？</div>
+                </div>
+
+                <div class="prompt-template">
+                    <h4>⚡ 效能優化提示詞</h4>
+                    <div class="prompt-content">我的手勢追蹤應用程式執行效能不佳，FPS 只有約 {數值}。
+
+目前設定：
+- maxNumHands: {值}
+- modelComplexity: {值}
+- 畫布解析度: {值}
+- 其他相關設定...
+
+請提供效能優化建議，包括：
+1. MediaPipe 參數調整
+2. 程式碼層面的優化
+3. 瀏覽器/硬體層面的考量
+4. 效能與精準度的權衡取捨</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: 練習與檢核 -->
+        <div class="slide" id="slide12">
+            <h2 class="slide-title">✅ 練習與檢核</h2>
+            <div class="slide-content">
+                <div class="highlight-box">
+                    <h3>本節實作任務</h3>
+                    <p>完成手勢追蹤模組，確保能正確取得並處理手部座標</p>
+                </div>
+
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>建立追蹤模組</h4>
+                        <p>依照範例建立 HandTracker 類別，放置於 js/modules/ 目錄</p>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>測試追蹤功能</h4>
+                        <p>在 console 輸出座標資訊，確認追蹤正常運作</p>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>調整參數</h4>
+                        <p>嘗試不同的 smoothingFactor，找到最佳平滑度</p>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h4>視覺化驗證</h4>
+                        <p>在除錯畫布上繪製追蹤點，驗證座標轉換正確</p>
+                    </div>
+                </div>
+
+                <div class="tip-box">
+                    <h4>💡 進階挑戰</h4>
+                    <ul>
+                        <li>實作雙手追蹤，分別標示左右手</li>
+                        <li>計算手掌中心點（使用多個關鍵點平均）</li>
+                        <li>偵測簡單手勢（例如握拳 vs 張開）</li>
+                    </ul>
+                </div>
+
+                <div class="prompt-template" style="margin-top: 1.5rem;">
+                    <h4>練習：撰寫你的提示詞</h4>
+                    <p style="margin-bottom: 1rem; color: #e0e0e0;">嘗試使用本節學到的 AI 輔助開發技巧，撰寫一個提示詞來解決手勢追蹤相關問題：</p>
+                    <div class="input-wrapper">
+                        <textarea class="practice-input" id="practice1" placeholder="在這裡寫下你的提示詞..."></textarea>
+                        <button class="copy-input-btn" onclick="copyInput('practice1')">複製</button>
+                    </div>
+                </div>
+
+                <div class="flow-diagram">
+                    <div class="flow-box">完成本節</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">下一節：粒子系統實作</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="nav-arrow prev-arrow" onclick="prevSlide()">◀</button>
+    <button class="nav-arrow next-arrow" onclick="nextSlide()">▶</button>
+    <div class="slide-number"><span id="currentSlide">1</span> / <span id="totalSlides">12</span></div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        document.getElementById('totalSlides').textContent = totalSlides;
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.classList.remove('active');
+                if (i === index) slide.classList.add('active');
+            });
+            document.getElementById('currentSlide').textContent = index + 1;
+            document.querySelector('.prev-arrow').disabled = index === 0;
+            document.querySelector('.next-arrow').disabled = index === totalSlides - 1;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) { currentSlide++; showSlide(currentSlide); }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) { currentSlide--; showSlide(currentSlide); }
+        }
+
+        function copyCode(btn) {
+            const codeBlock = btn.parentElement;
+            const code = codeBlock.querySelector('code').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                btn.textContent = '已複製！';
+                setTimeout(() => btn.textContent = '複製', 2000);
+            });
+        }
+
+        // 鍵盤控制
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevSlide();
+            }
+        });
+
+        // 初始化
+        showSlide(0);
+
+        // 複製練習輸入框內容
+        function copyInput(id) {
+            const textarea = document.getElementById(id);
+            const btn = textarea.parentElement.querySelector('.copy-input-btn');
+            if (textarea.value.trim() === '') {
+                alert('請先輸入內容再複製！');
+                return;
+            }
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                btn.textContent = '已複製！';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = '複製';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        // 全螢幕切換
+        function toggleFullscreen() {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                btn.textContent = '離開全螢幕';
+            } else {
+                document.exitFullscreen();
+                btn.textContent = '全螢幕';
+            }
+        }
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) btn.textContent = '全螢幕';
+        });
+    </script>
+
+    <footer style="text-align: center; padding: 2rem; color: #888; font-size: 0.9rem;">
+        <p>提示詞工程教學 - Part 5-2：手勢追蹤實作</p>
+        <p>© 2026 阿亮老師 | 版權所有</p>
+    </footer>
+</body>
+</html>

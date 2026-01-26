@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8-3 GAS 程式碼撰寫 - LINE AI 評語機器人</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a237e 50%, #283593 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            color: #333;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image:
+                radial-gradient(2px 2px at 20px 30px, white, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 90px 40px, white, transparent);
+            background-size: 550px 250px;
+            animation: twinkle 8s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+        }
+
+        .nav-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(26, 35, 126, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 10000;
+        }
+        .nav-title {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #00c300, #00e676);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .nav-buttons { display: flex; gap: 12px; }
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        .nav-btn:hover {
+            background: rgba(0, 195, 0, 0.3);
+            border-color: #00c300;
+        }
+
+        .nav-arrow {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(26, 35, 126, 0.8);
+            color: white;
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 195, 0, 0.5);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 9000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-arrow:hover {
+            background: rgba(57, 73, 171, 0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+        .prev-arrow { left: 30px; }
+        .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .slide-container {
+            width: 100%;
+            height: 100vh;
+            padding-top: 60px;
+            position: relative;
+            z-index: 1;
+        }
+        .slide {
+            position: absolute;
+            top: 60px; left: 0;
+            width: 100%;
+            height: calc(100vh - 60px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 10;
+        }
+        .slide.active {
+            display: flex;
+            opacity: 1;
+            z-index: 20;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.97);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            padding: 35px 45px;
+            max-width: 1400px;
+            width: 96%;
+            max-height: 88vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 38px;
+            margin-bottom: 15px;
+            text-align: center;
+            background: linear-gradient(135deg, #00c300, #00e676);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        h2 {
+            color: #00c300;
+            font-size: 28px;
+            margin-bottom: 20px;
+            border-bottom: 4px solid;
+            border-image: linear-gradient(90deg, #00c300, #00e676) 1;
+            padding-bottom: 10px;
+        }
+        h3 { color: #00a000; font-size: 20px; margin: 18px 0 10px 0; }
+        h4 { color: #00c300; font-size: 17px; margin: 12px 0 8px 0; }
+
+        p, li {
+            font-size: 16px;
+            line-height: 1.7;
+            color: #444;
+            margin-bottom: 8px;
+        }
+        ul, ol { margin-left: 25px; margin-bottom: 12px; }
+
+        .prompt-box {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border: 3px solid #ff6f00;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 15px 0;
+            position: relative;
+        }
+        .prompt-box::before {
+            content: 'AI 提示詞';
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: #ff6f00;
+            color: white;
+            padding: 4px 15px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .prompt-box pre {
+            background: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            margin: 10px 0 0 0;
+            border: 1px solid #ffcc80;
+        }
+
+        .code-box {
+            background: linear-gradient(135deg, #1a237e, #283593);
+            color: #e8eaf6;
+            padding: 20px;
+            border-radius: 12px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            margin: 15px 0;
+            overflow-x: auto;
+            position: relative;
+        }
+        .code-box::before {
+            content: 'GAS 程式碼';
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: #00c300;
+            color: white;
+            padding: 4px 15px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .code-box .comment { color: #81c784; }
+        .code-box .keyword { color: #64b5f6; }
+        .code-box .string { color: #ffb74d; }
+        .code-box .function { color: #ce93d8; }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+            border-left: 5px solid #00c300;
+            padding: 18px 22px;
+            border-radius: 0 15px 15px 0;
+            margin: 15px 0;
+        }
+        .highlight-box h4 { color: #00c300; margin-top: 0; }
+
+        .step-box {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-left: 5px solid #1976d2;
+            padding: 18px 22px;
+            border-radius: 0 15px 15px 0;
+            margin: 15px 0;
+        }
+        .step-box h4 { color: #1976d2; margin-top: 0; }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 15px 0;
+        }
+
+        .tag {
+            display: inline-block;
+            background: #00c300;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+        .tag.orange { background: #ff6f00; }
+        .tag.blue { background: #0277bd; }
+        .tag.red { background: #d32f2f; }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .copy-btn:hover { background: rgba(255,255,255,0.3); }
+
+        .progress-indicator {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 9999;
+        }
+        .progress-dot {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .progress-dot.active {
+            background: #00c300;
+            transform: scale(1.3);
+        }
+
+        @media (max-width: 900px) {
+            .grid-2 { grid-template-columns: 1fr; }
+            .content-card { padding: 20px; }
+            h1 { font-size: 28px; }
+            h2 { font-size: 22px; }
+            .code-box { font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <div class="nav-title">8-3 GAS 程式碼撰寫</div>
+        <div class="nav-buttons">
+            <a href="index2.html" class="nav-btn">首頁</a>
+            <a href="Part8-4_AI_API整合.html" class="nav-btn">下一章</a>
+            <button class="nav-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="nav-btn">YT</a>
+            <a href="https://www.facebook.com/?locale=zh_TW" target="_blank" class="nav-btn">FB</a>
+            <a href="https://www.facebook.com/groups/2754139931432955?locale=zh_TW" target="_blank" class="nav-btn">3A</a>
+        </div>
+    </nav>
+
+    <button class="nav-arrow prev-arrow" onclick="prevSlide()">←</button>
+    <button class="nav-arrow next-arrow" onclick="nextSlide()">→</button>
+
+    <div class="slide-container">
+        <!-- Slide 1: 標題頁 -->
+        <div class="slide active">
+            <div class="content-card" style="text-align: center;">
+                <div style="margin-bottom: 25px;">
+                    <span class="tag">Part 8-3</span>
+                    <span class="tag orange">核心實作</span>
+                    <span class="tag red">完整程式碼</span>
+                </div>
+                <h1>GAS 程式碼撰寫</h1>
+                <p style="font-size: 20px; color: #00c300; margin: 25px 0;">
+                    從提示詞到完整程式碼的實作過程
+                </p>
+                <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #e8f5e9, #c8e6c9); border-radius: 15px;">
+                    <p style="font-size: 17px; margin: 0;">
+                        本單元將示範如何用<strong>提示詞請 AI 幫你寫程式</strong><br>
+                        並提供完整可運行的 GAS 程式碼
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: 提示詞示範 - 請 AI 幫寫基礎架構 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Step 1：用提示詞請 AI 寫基礎架構</h2>
+
+                <div class="prompt-box">
+                    <p style="margin: 0 0 10px 0;"><strong>複製這段提示詞，貼到 ChatGPT 或 Claude：</strong></p>
+                    <pre>請幫我寫一個 Google Apps Script 程式，功能如下：
+
+1. 作為 LINE Bot 的 Webhook 伺服器
+2. 接收 LINE 傳來的文字訊息
+3. 將訊息記錄到 Google Sheet（時間、用戶ID、訊息內容）
+4. 回覆一則確認訊息給用戶
+
+需要的設定值：
+- LINE_CHANNEL_ACCESS_TOKEN（環境變數）
+- SPREADSHEET_ID（試算表ID）
+
+請提供完整程式碼，並加上中文註解說明每個函數的用途。</pre>
+                </div>
+
+                <div class="highlight-box">
+                    <h4>提示詞設計重點</h4>
+                    <ul style="margin-bottom: 0;">
+                        <li><strong>明確列出功能需求</strong>：用編號清楚說明要做什麼</li>
+                        <li><strong>指定技術</strong>：明確說是 Google Apps Script</li>
+                        <li><strong>要求註解</strong>：方便理解與修改</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 基礎程式碼 - 設定與 doPost -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Step 2：基礎程式碼 - 設定區</h2>
+
+                <div class="code-box">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+<span class="comment">// ===== 設定區（請填入你的資料）=====</span>
+<span class="keyword">const</span> LINE_CHANNEL_ACCESS_TOKEN = <span class="string">'你的LINE Token'</span>;
+<span class="keyword">const</span> SPREADSHEET_ID = <span class="string">'你的試算表ID'</span>;
+<span class="keyword">const</span> SHEET_NAME = <span class="string">'作品記錄'</span>;
+
+<span class="comment">// OpenAI 設定（二選一）</span>
+<span class="keyword">const</span> OPENAI_API_KEY = <span class="string">'你的OpenAI Key'</span>;
+
+<span class="comment">// Gemini 設定（二選一）</span>
+<span class="keyword">const</span> GEMINI_API_KEY = <span class="string">'你的Gemini Key'</span>;
+
+<span class="comment">// ===== LINE Webhook 入口點 =====</span>
+<span class="keyword">function</span> <span class="function">doPost</span>(e) {
+  <span class="keyword">try</span> {
+    <span class="keyword">const</span> data = <span class="function">JSON.parse</span>(e.postData.contents);
+    <span class="keyword">const</span> events = data.events;
+
+    <span class="keyword">for</span> (<span class="keyword">const</span> event <span class="keyword">of</span> events) {
+      <span class="keyword">if</span> (event.type === <span class="string">'message'</span>) {
+        <span class="function">handleMessage</span>(event);
+      }
+    }
+
+    <span class="keyword">return</span> ContentService.<span class="function">createTextOutput</span>(<span class="string">'OK'</span>);
+  } <span class="keyword">catch</span> (error) {
+    <span class="function">console.error</span>(<span class="string">'doPost error:'</span>, error);
+    <span class="keyword">return</span> ContentService.<span class="function">createTextOutput</span>(<span class="string">'Error'</span>);
+  }
+}
+                </div>
+
+                <div class="step-box">
+                    <h4>設定步驟</h4>
+                    <ol style="margin-bottom: 0;">
+                        <li>打開 Google Apps Script（script.google.com）</li>
+                        <li>建立新專案，命名為「LINE AI 評語機器人」</li>
+                        <li>貼上程式碼，填入你的 Token 和 ID</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 訊息處理函數 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Step 3：訊息處理函數</h2>
+
+                <div class="code-box">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+<span class="comment">// ===== 處理收到的訊息 =====</span>
+<span class="keyword">function</span> <span class="function">handleMessage</span>(event) {
+  <span class="keyword">const</span> userId = event.source.userId;
+  <span class="keyword">const</span> replyToken = event.replyToken;
+  <span class="keyword">const</span> message = event.message;
+
+  <span class="keyword">let</span> content = <span class="string">''</span>;
+
+  <span class="comment">// 根據訊息類型處理</span>
+  <span class="keyword">if</span> (message.type === <span class="string">'text'</span>) {
+    content = message.text;
+  } <span class="keyword">else if</span> (message.type === <span class="string">'file'</span>) {
+    <span class="comment">// PDF 檔案處理</span>
+    content = <span class="function">handleFileMessage</span>(message.id);
+  } <span class="keyword">else if</span> (message.type === <span class="string">'image'</span>) {
+    content = <span class="string">'[圖片] 已收到，稍後處理'</span>;
+  }
+
+  <span class="comment">// 1. 記錄到 Google Sheet</span>
+  <span class="function">saveToSheet</span>(userId, message.type, content);
+
+  <span class="comment">// 2. 呼叫 AI 生成評語</span>
+  <span class="keyword">const</span> feedback = <span class="function">generateFeedback</span>(content);
+
+  <span class="comment">// 3. 回覆給學生</span>
+  <span class="function">replyMessage</span>(replyToken, feedback);
+}
+
+<span class="comment">// ===== 儲存到 Google Sheet =====</span>
+<span class="keyword">function</span> <span class="function">saveToSheet</span>(userId, type, content) {
+  <span class="keyword">const</span> ss = SpreadsheetApp.<span class="function">openById</span>(SPREADSHEET_ID);
+  <span class="keyword">const</span> sheet = ss.<span class="function">getSheetByName</span>(SHEET_NAME) || ss.<span class="function">insertSheet</span>(SHEET_NAME);
+
+  <span class="comment">// 加入新的一列</span>
+  sheet.<span class="function">appendRow</span>([
+    <span class="keyword">new</span> <span class="function">Date</span>(),           <span class="comment">// 時間戳記</span>
+    userId,                  <span class="comment">// LINE 用戶 ID</span>
+    type,                    <span class="comment">// 訊息類型</span>
+    content.<span class="function">substring</span>(0, 500) <span class="comment">// 內容（限制長度）</span>
+  ]);
+}
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: AI 評語生成（Gemini 版） -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Step 4：AI 評語生成（Gemini 版）</h2>
+
+                <div class="prompt-box">
+                    <p style="margin: 0 0 10px 0;"><strong>請 AI 幫你寫 Gemini API 呼叫：</strong></p>
+                    <pre>請幫我寫一個 Google Apps Script 函數，用來呼叫 Gemini API：
+
+1. 函數名稱：generateFeedbackWithGemini(content)
+2. 使用 gemini-2.5-flash 模型
+3. 提示詞要求 AI 生成：
+   - 四字+四字的評語（如「學海無涯・勤能補拙」）
+   - 50-100 字的具體回饋
+4. 回傳格式化的評語字串
+
+請加上錯誤處理和中文註解。</pre>
+                </div>
+
+                <div class="code-box">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+<span class="comment">// ===== Gemini API 生成評語 =====</span>
+<span class="keyword">function</span> <span class="function">generateFeedback</span>(content) {
+  <span class="keyword">const</span> url = <span class="string">`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`</span>;
+
+  <span class="keyword">const</span> prompt = <span class="string">`你是一位溫暖且專業的教師，請針對以下學生作品給予評語。
+
+【學生作品】
+${content}
+
+【評語要求】
+1. 先給出「四字・四字」格式的精簡評語（如：探索未知・勇於嘗試）
+2. 再給出 50-100 字的具體回饋，包含：
+   - 肯定做得好的地方
+   - 一個具體的改進建議
+
+【輸出格式】
+評語：○○○○・○○○○
+回饋：（具體文字）`</span>;
+
+  <span class="keyword">const</span> payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 500
+    }
+  };
+
+  <span class="keyword">const</span> options = {
+    method: <span class="string">'post'</span>,
+    contentType: <span class="string">'application/json'</span>,
+    payload: <span class="function">JSON.stringify</span>(payload),
+    muteHttpExceptions: <span class="keyword">true</span>
+  };
+
+  <span class="keyword">try</span> {
+    <span class="keyword">const</span> response = <span class="function">UrlFetchApp.fetch</span>(url, options);
+    <span class="keyword">const</span> result = <span class="function">JSON.parse</span>(response.<span class="function">getContentText</span>());
+    <span class="keyword">return</span> result.candidates[0].content.parts[0].text;
+  } <span class="keyword">catch</span> (error) {
+    <span class="function">console.error</span>(<span class="string">'Gemini API error:'</span>, error);
+    <span class="keyword">return</span> <span class="string">'感謝你的提交！老師稍後會給你回饋。'</span>;
+  }
+}
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: AI 評語生成（OpenAI 版） -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Step 4（替代）：AI 評語生成（OpenAI 版）</h2>
+
+                <div class="code-box">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+<span class="comment">// ===== OpenAI API 生成評語 =====</span>
+<span class="keyword">function</span> <span class="function">generateFeedbackWithOpenAI</span>(content) {
+  <span class="keyword">const</span> url = <span class="string">'https://api.openai.com/v1/chat/completions'</span>;
+
+  <span class="keyword">const</span> prompt = <span class="string">`你是一位溫暖且專業的教師，請針對以下學生作品給予評語。
+
+【學生作品】
+${content}
+
+【評語要求】
+1. 先給出「四字・四字」格式的精簡評語
+2. 再給出 50-100 字的具體回饋
+
+【輸出格式】
+評語：○○○○・○○○○
+回饋：（具體文字）`</span>;
+
+  <span class="keyword">const</span> payload = {
+    model: <span class="string">'gpt-4o'</span>,
+    messages: [
+      { role: <span class="string">'system'</span>, content: <span class="string">'你是一位專業且溫暖的教師。'</span> },
+      { role: <span class="string">'user'</span>, content: prompt }
+    ],
+    temperature: 0.7,
+    max_tokens: 500
+  };
+
+  <span class="keyword">const</span> options = {
+    method: <span class="string">'post'</span>,
+    headers: {
+      <span class="string">'Authorization'</span>: <span class="string">`Bearer ${OPENAI_API_KEY}`</span>,
+      <span class="string">'Content-Type'</span>: <span class="string">'application/json'</span>
+    },
+    payload: <span class="function">JSON.stringify</span>(payload),
+    muteHttpExceptions: <span class="keyword">true</span>
+  };
+
+  <span class="keyword">try</span> {
+    <span class="keyword">const</span> response = <span class="function">UrlFetchApp.fetch</span>(url, options);
+    <span class="keyword">const</span> result = <span class="function">JSON.parse</span>(response.<span class="function">getContentText</span>());
+    <span class="keyword">return</span> result.choices[0].message.content;
+  } <span class="keyword">catch</span> (error) {
+    <span class="function">console.error</span>(<span class="string">'OpenAI API error:'</span>, error);
+    <span class="keyword">return</span> <span class="string">'感謝你的提交！老師稍後會給你回饋。'</span>;
+  }
+}
+                </div>
+
+                <div class="highlight-box">
+                    <h4>選擇使用哪個 API</h4>
+                    <p style="margin-bottom: 0;">在 <code>handleMessage</code> 函數中，將 <code>generateFeedback(content)</code> 改為 <code>generateFeedbackWithOpenAI(content)</code> 即可切換。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: LINE 回覆函數 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Step 5：LINE 回覆函數</h2>
+
+                <div class="code-box">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+<span class="comment">// ===== 回覆 LINE 訊息 =====</span>
+<span class="keyword">function</span> <span class="function">replyMessage</span>(replyToken, text) {
+  <span class="keyword">const</span> url = <span class="string">'https://api.line.me/v2/bot/message/reply'</span>;
+
+  <span class="keyword">const</span> payload = {
+    replyToken: replyToken,
+    messages: [
+      {
+        type: <span class="string">'text'</span>,
+        text: text
+      }
+    ]
+  };
+
+  <span class="keyword">const</span> options = {
+    method: <span class="string">'post'</span>,
+    headers: {
+      <span class="string">'Content-Type'</span>: <span class="string">'application/json'</span>,
+      <span class="string">'Authorization'</span>: <span class="string">`Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`</span>
+    },
+    payload: <span class="function">JSON.stringify</span>(payload)
+  };
+
+  <span class="function">UrlFetchApp.fetch</span>(url, options);
+}
+
+<span class="comment">// ===== Webhook 驗證用（GET 請求）=====</span>
+<span class="keyword">function</span> <span class="function">doGet</span>(e) {
+  <span class="keyword">return</span> ContentService.<span class="function">createTextOutput</span>(<span class="string">'LINE Bot is running!'</span>);
+}
+                </div>
+
+                <div class="step-box">
+                    <h4>部署步驟</h4>
+                    <ol style="margin-bottom: 0;">
+                        <li>點擊「部署」→「新增部署作業」</li>
+                        <li>選擇類型：「網頁應用程式」</li>
+                        <li>執行身分：「我」</li>
+                        <li>存取權限：「所有人」</li>
+                        <li>複製部署後的網址，貼到 LINE Webhook URL</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: PDF 處理函數 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Step 6：PDF 檔案處理（選用）</h2>
+
+                <div class="prompt-box">
+                    <p style="margin: 0 0 10px 0;"><strong>請 AI 幫你寫 PDF 文字提取：</strong></p>
+                    <pre>請幫我寫 Google Apps Script 函數，從 LINE 傳來的 PDF 檔案提取文字：
+
+1. 使用 LINE 的 Content API 下載檔案
+2. 將檔案暫存到 Google Drive
+3. 使用 Google Drive 的 OCR 功能提取文字
+4. 刪除暫存檔案
+5. 回傳提取的文字內容
+
+需要 LINE_CHANNEL_ACCESS_TOKEN 來下載檔案。</pre>
+                </div>
+
+                <div class="code-box">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+<span class="comment">// ===== 處理 PDF 檔案 =====</span>
+<span class="keyword">function</span> <span class="function">handleFileMessage</span>(messageId) {
+  <span class="keyword">try</span> {
+    <span class="comment">// 1. 從 LINE 下載檔案</span>
+    <span class="keyword">const</span> fileUrl = <span class="string">`https://api-data.line.me/v2/bot/message/${messageId}/content`</span>;
+    <span class="keyword">const</span> response = <span class="function">UrlFetchApp.fetch</span>(fileUrl, {
+      headers: { <span class="string">'Authorization'</span>: <span class="string">`Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`</span> }
+    });
+
+    <span class="comment">// 2. 暫存到 Google Drive</span>
+    <span class="keyword">const</span> blob = response.<span class="function">getBlob</span>();
+    <span class="keyword">const</span> file = DriveApp.<span class="function">createFile</span>(blob.<span class="function">setName</span>(<span class="string">'temp.pdf'</span>));
+
+    <span class="comment">// 3. 使用 Google Docs 轉換提取文字</span>
+    <span class="keyword">const</span> doc = Drive.Files.<span class="function">copy</span>(
+      { title: <span class="string">'temp_doc'</span>, mimeType: MimeType.GOOGLE_DOCS },
+      file.<span class="function">getId</span>(),
+      { ocr: <span class="keyword">true</span>, ocrLanguage: <span class="string">'zh-TW'</span> }
+    );
+
+    <span class="keyword">const</span> text = DocumentApp.<span class="function">openById</span>(doc.id).<span class="function">getBody</span>().<span class="function">getText</span>();
+
+    <span class="comment">// 4. 清理暫存檔案</span>
+    DriveApp.<span class="function">getFileById</span>(file.<span class="function">getId</span>()).<span class="function">setTrashed</span>(<span class="keyword">true</span>);
+    DriveApp.<span class="function">getFileById</span>(doc.id).<span class="function">setTrashed</span>(<span class="keyword">true</span>);
+
+    <span class="keyword">return</span> text;
+  } <span class="keyword">catch</span> (error) {
+    <span class="function">console.error</span>(<span class="string">'PDF處理錯誤:'</span>, error);
+    <span class="keyword">return</span> <span class="string">'[PDF 檔案已收到，處理中...]'</span>;
+  }
+}
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: 測試函數 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Step 7：測試函數</h2>
+
+                <div class="code-box">
+                    <button class="copy-btn" onclick="copyCode(this)">複製</button>
+<span class="comment">// ===== 測試 AI 評語生成 =====</span>
+<span class="keyword">function</span> <span class="function">testGenerateFeedback</span>() {
+  <span class="keyword">const</span> testContent = <span class="string">`這是我對火星探測任務的學習心得：
+
+我學到火星探測車毅力號使用核能電池，因為火星上的太陽能不夠穩定。
+火星的大氣層很薄，溫度變化很大，探測車需要特殊的保護設計。
+我覺得人類探索太空很厲害，希望以後也能參與太空任務。`</span>;
+
+  <span class="keyword">const</span> feedback = <span class="function">generateFeedback</span>(testContent);
+  <span class="function">console.log</span>(<span class="string">'===== 測試結果 ====='</span>);
+  <span class="function">console.log</span>(feedback);
+}
+
+<span class="comment">// ===== 測試 Google Sheet 寫入 =====</span>
+<span class="keyword">function</span> <span class="function">testSaveToSheet</span>() {
+  <span class="function">saveToSheet</span>(<span class="string">'TEST_USER_123'</span>, <span class="string">'text'</span>, <span class="string">'這是測試內容'</span>);
+  <span class="function">console.log</span>(<span class="string">'已寫入 Sheet，請檢查試算表'</span>);
+}
+                </div>
+
+                <div class="grid-2">
+                    <div class="highlight-box">
+                        <h4>執行測試</h4>
+                        <ol style="margin-bottom: 0;">
+                            <li>選擇函數 <code>testGenerateFeedback</code></li>
+                            <li>點擊「執行」按鈕</li>
+                            <li>查看執行記錄中的輸出</li>
+                            <li>確認 AI 評語格式正確</li>
+                        </ol>
+                    </div>
+                    <div class="step-box">
+                        <h4>預期輸出範例</h4>
+                        <p style="margin-bottom: 0; font-size: 14px;">
+                            <strong>評語：</strong>探索未知・勇於嘗試<br><br>
+                            <strong>回饋：</strong>你對火星探測任務的理解很到位，特別是正確指出核能電池的優勢...
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: 完整程式碼總覽 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>完整程式碼總覽</h2>
+
+                <div class="highlight-box">
+                    <h4>程式碼結構</h4>
+                    <pre style="background: #fff; padding: 15px; border-radius: 10px; font-family: monospace; margin: 10px 0;">
+LINE_AI_Bot.gs
+├── 設定區
+│   ├── LINE_CHANNEL_ACCESS_TOKEN
+│   ├── SPREADSHEET_ID
+│   └── GEMINI_API_KEY / OPENAI_API_KEY
+│
+├── 主要函數
+│   ├── doPost(e)          // Webhook 入口
+│   ├── doGet(e)           // 驗證用
+│   └── handleMessage()    // 訊息處理
+│
+├── 資料處理
+│   ├── saveToSheet()      // 儲存到試算表
+│   └── handleFileMessage() // PDF 處理
+│
+├── AI 整合
+│   ├── generateFeedback()           // Gemini 版
+│   └── generateFeedbackWithOpenAI() // OpenAI 版
+│
+├── LINE 回覆
+│   └── replyMessage()     // 回覆訊息
+│
+└── 測試函數
+    ├── testGenerateFeedback()
+    └── testSaveToSheet()
+                    </pre>
+                </div>
+
+                <div style="text-align: center; margin-top: 20px; padding: 20px; background: linear-gradient(135deg, #e8f5e9, #c8e6c9); border-radius: 15px;">
+                    <p style="font-size: 18px; margin: 0; color: #00c300;">
+                        <strong>下一單元：8-4 AI API 整合</strong><br>
+                        深入講解 AI 評語提示詞設計與優化
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="progress-indicator"></div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        function createProgressDots() {
+            const container = document.querySelector('.progress-indicator');
+            for (let i = 0; i < totalSlides; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'progress-dot' + (i === 0 ? ' active' : '');
+                dot.onclick = () => goToSlide(i);
+                container.appendChild(dot);
+            }
+        }
+
+        function updateProgress() {
+            document.querySelectorAll('.progress-dot').forEach((dot, i) => {
+                dot.classList.toggle('active', i === currentSlide);
+            });
+        }
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.classList.toggle('active', i === index);
+            });
+            updateProgress();
+            document.querySelector('.prev-arrow').disabled = index === 0;
+            document.querySelector('.next-arrow').disabled = index === totalSlides - 1;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        }
+
+        function goToSlide(index) {
+            currentSlide = index;
+            showSlide(currentSlide);
+        }
+
+        function copyCode(btn) {
+            const codeBox = btn.parentElement;
+            const code = codeBox.innerText.replace('複製', '').trim();
+            navigator.clipboard.writeText(code);
+            btn.textContent = '已複製!';
+            setTimeout(() => btn.textContent = '複製', 2000);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        createProgressDots();
+        showSlide(0);
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+    </script>
+</body>
+</html>

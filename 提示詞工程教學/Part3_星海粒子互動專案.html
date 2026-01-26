@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Part 3 - 星海粒子互動專案（詳細教學）</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a0033 0%, #4a148c 50%, #311b92 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            color: #333;
+        }
+
+        /* 導航列 */
+        .nav-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(74, 20, 140, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 10000;
+        }
+
+        .nav-title {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #ff00ff, #00ffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-buttons { display: flex; gap: 12px; }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 0, 255, 0.3);
+            border-color: #ff00ff;
+        }
+
+        /* 導航箭頭 */
+        .nav-arrow {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(74, 20, 140, 0.8);
+            color: white;
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 0, 255, 0.5);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 9000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-arrow:hover {
+            background: rgba(156, 39, 176, 0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+        .prev-arrow { left: 30px; }
+        .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* 投影片容器 */
+        .slide-container {
+            width: 100%;
+            height: 100vh;
+            padding-top: 60px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .slide {
+            position: absolute;
+            top: 60px; left: 0;
+            width: 100%;
+            height: calc(100vh - 60px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 10;
+        }
+
+        .slide.active {
+            display: flex;
+            opacity: 1;
+            z-index: 20;
+        }
+
+        /* 內容卡片 */
+        .content-card {
+            background: rgba(255, 255, 255, 0.97);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            padding: 40px 50px;
+            max-width: 1350px;
+            width: 95%;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* 標題樣式 */
+        h1 {
+            font-size: 42px;
+            margin-bottom: 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #7b1fa2, #00bcd4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        h2 {
+            color: #4a148c;
+            font-size: 30px;
+            margin-bottom: 25px;
+            border-bottom: 4px solid;
+            border-image: linear-gradient(90deg, #ff00ff, #00ffff) 1;
+            padding-bottom: 12px;
+        }
+        h3 { color: #7b1fa2; font-size: 22px; margin: 20px 0 12px 0; }
+        h4 { color: #9c27b0; font-size: 18px; margin: 15px 0 8px 0; }
+
+        p, li {
+            font-size: 17px;
+            line-height: 1.8;
+            color: #444;
+            margin-bottom: 10px;
+        }
+
+        ul, ol {
+            margin-left: 25px;
+            margin-bottom: 15px;
+        }
+
+        code {
+            background: linear-gradient(135deg, #f3e5f5, #e1f5fe);
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-family: 'Consolas', monospace;
+            color: #4a148c;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: linear-gradient(135deg, #1a0033, #311b92);
+            color: #e1bee7;
+            padding: 20px 25px;
+            border-radius: 14px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-size: 14px;
+            line-height: 1.6;
+            font-family: 'Consolas', monospace;
+            border: 1px solid rgba(255, 0, 255, 0.3);
+        }
+
+        /* 步驟編號 */
+        .step-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #7b1fa2, #00bcd4);
+            color: white;
+            border-radius: 50%;
+            font-size: 20px;
+            font-weight: 700;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .step-title {
+            display: flex;
+            align-items: center;
+            margin: 25px 0 15px 0;
+        }
+
+        .step-title h3 {
+            margin: 0;
+            flex: 1;
+        }
+
+        /* 提示方塊 */
+        .box {
+            padding: 20px 25px;
+            border-radius: 14px;
+            margin: 20px 0;
+            border-left: 5px solid;
+            font-size: 16px;
+            line-height: 1.7;
+        }
+        .info { background: #e3f2fd; border-color: #2196f3; color: #0d47a1; }
+        .tip { background: #e8f5e9; border-color: #4caf50; color: #1b5e20; }
+        .warning { background: #fff3e0; border-color: #ff9800; color: #e65100; }
+        .code-note { background: #f3e5f5; border-color: #9c27b0; color: #4a148c; }
+
+        /* 檔案結構 */
+        .file-structure {
+            background: #263238;
+            color: #aed581;
+            padding: 20px 25px;
+            border-radius: 12px;
+            font-family: 'Consolas', monospace;
+            font-size: 15px;
+            line-height: 1.8;
+            margin: 20px 0;
+        }
+
+        .file-structure .folder { color: #81d4fa; }
+        .file-structure .file { color: #fff59d; }
+        .file-structure .comment { color: #78909c; }
+
+        /* 表格 */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 15px;
+        }
+
+        .info-table th, .info-table td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 2px solid #e8eaf6;
+        }
+
+        .info-table th {
+            background: linear-gradient(135deg, #4a148c, #7b1fa2);
+            color: white;
+        }
+
+        .info-table tr:hover {
+            background: #fce4ec;
+        }
+
+        /* 重點標記 */
+        .highlight {
+            background: linear-gradient(120deg, #ff00ff33, #00ffff33);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        /* 流程圖 */
+        .flow-diagram {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 25px 0;
+            padding: 25px;
+            background: linear-gradient(135deg, #1a0033, #311b92);
+            border-radius: 16px;
+        }
+
+        .flow-box {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 0, 255, 0.5);
+            border-radius: 12px;
+            padding: 15px 20px;
+            text-align: center;
+            color: white;
+            min-width: 120px;
+        }
+
+        .flow-box strong {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #ff00ff;
+        }
+
+        .flow-arrow {
+            font-size: 24px;
+            color: #00ffff;
+        }
+
+        /* 頁碼指示器 */
+        .indicators {
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 4000;
+            padding: 10px 20px;
+            background: rgba(74, 20, 140, 0.9);
+            border-radius: 30px;
+        }
+        .dot {
+            width: 10px;
+            height: 10px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .dot.active {
+            background: linear-gradient(135deg, #ff00ff, #00ffff);
+            transform: scale(1.3);
+        }
+
+        /* 封面 */
+        .cover-slide {
+            text-align: center;
+        }
+
+        .cover-slide .subtitle {
+            color: #9c27b0;
+            font-size: 18px;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+        }
+
+        /* Demo 按鈕 */
+        .demo-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #ff00ff, #00ffff);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: 700;
+            text-decoration: none;
+            margin-top: 25px;
+            transition: all 0.3s;
+        }
+
+        .demo-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.6);
+        }
+
+        /* 兩欄佈局 */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 900px) {
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .col-box {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .col-box h4 {
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 導航列 -->
+    <div class="nav-bar">
+        <div class="nav-title">Part 3 - 星海粒子互動專案（詳細教學）</div>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-btn">首頁</a>
+            <a href="星海粒子Demo/index.html" class="nav-btn" target="_blank">開啟 Demo</a>
+            <button class="nav-btn" onclick="toggleFullscreen()">全螢幕</button>
+        </div>
+    </div>
+
+    <!-- 投影片內容 -->
+    <div class="slide-container">
+
+        <!-- Slide 1: 封面 -->
+        <div class="slide active">
+            <div class="content-card cover-slide">
+                <div class="subtitle">Step-by-Step Tutorial</div>
+                <h1>星海粒子互動專案</h1>
+                <p style="font-size: 20px; color: #666; margin: 20px 0;">
+                    一步一步帶你完成手勢控制粒子系統<br>
+                    從零開始，完整可運行的專案
+                </p>
+                <div style="display: flex; justify-content: center; gap: 20px; margin-top: 30px; flex-wrap: wrap;">
+                    <span style="background: #e3f2fd; padding: 10px 20px; border-radius: 20px; color: #1565c0;">Step 1-8 完整步驟</span>
+                    <span style="background: #f3e5f5; padding: 10px 20px; border-radius: 20px; color: #7b1fa2;">附完整程式碼</span>
+                    <span style="background: #e8f5e9; padding: 10px 20px; border-radius: 20px; color: #2e7d32;">可直接運行</span>
+                </div>
+                <a href="星海粒子Demo/index.html" class="demo-btn" target="_blank">
+                    立即體驗 Demo
+                </a>
+            </div>
+        </div>
+
+        <!-- Slide 2: 專案概覽 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>專案概覽：我們要做什麼？</h2>
+                <div class="flow-diagram">
+                    <div class="flow-box">
+                        <strong>攝影機</strong>
+                        取得畫面
+                    </div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">
+                        <strong>MediaPipe</strong>
+                        偵測手部
+                    </div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">
+                        <strong>座標轉換</strong>
+                        計算位置
+                    </div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">
+                        <strong>Canvas</strong>
+                        繪製粒子
+                    </div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">
+                        <strong>互動</strong>
+                        手勢控制
+                    </div>
+                </div>
+
+                <h3>專案功能</h3>
+                <table class="info-table">
+                    <tr>
+                        <th>功能</th>
+                        <th>說明</th>
+                    </tr>
+                    <tr>
+                        <td>手勢追蹤</td>
+                        <td>使用 MediaPipe 即時偵測手部位置</td>
+                    </tr>
+                    <tr>
+                        <td>粒子系統</td>
+                        <td>Canvas 2D 繪製數萬顆粒子</td>
+                    </tr>
+                    <tr>
+                        <td>手勢互動</td>
+                        <td>粒子會被手指吸引或推開</td>
+                    </tr>
+                    <tr>
+                        <td>主題切換</td>
+                        <td>太空星塵 / 深海微光 兩種風格</td>
+                    </tr>
+                    <tr>
+                        <td>文字排列</td>
+                        <td>粒子可排列成指定文字</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Slide 3: 檔案結構 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Step 0：專案檔案結構</h2>
+                <p>這個專案只需要<span class="highlight">一個 HTML 檔案</span>就能運行！所有程式碼都包含在內。</p>
+
+                <div class="file-structure">
+                    <span class="folder">星海粒子Demo/</span><br>
+                    └── <span class="file">index.html</span> <span class="comment">← 包含 HTML + CSS + JavaScript 的完整檔案</span>
+                </div>
+
+                <div class="box tip">
+                    <strong>為什麼用單一檔案？</strong><br>
+                    - 方便分享與部署<br>
+                    - 不需要設定伺服器（直接開啟即可）<br>
+                    - 適合教學示範<br>
+                    - 實際專案可拆分成多個檔案
+                </div>
+
+                <h3>需要的外部資源（CDN 載入）</h3>
+                <table class="info-table">
+                    <tr>
+                        <th>資源</th>
+                        <th>用途</th>
+                        <th>載入方式</th>
+                    </tr>
+                    <tr>
+                        <td>MediaPipe Hands</td>
+                        <td>手部追蹤 AI 模型</td>
+                        <td>CDN script 標籤</td>
+                    </tr>
+                    <tr>
+                        <td>Camera Utils</td>
+                        <td>攝影機存取工具</td>
+                        <td>CDN script 標籤</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Slide 4: Step 1 HTML 結構 -->
+        <div class="slide">
+            <div class="content-card">
+                <div class="step-title">
+                    <span class="step-badge">1</span>
+                    <h3>建立 HTML 基本結構</h3>
+                </div>
+
+                <p>首先建立 HTML 檔案的基本架構：</p>
+
+                <pre>&lt;!DOCTYPE html&gt;
+&lt;html lang="zh-TW"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+    &lt;title&gt;星海粒子互動體驗&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;!-- 1. 粒子畫布 - 用來繪製所有粒子 --&gt;
+    &lt;canvas id="particleCanvas"&gt;&lt;/canvas&gt;
+
+    &lt;!-- 2. 攝影機預覽 - 顯示使用者的手 --&gt;
+    &lt;video id="webcamPreview" autoplay playsinline&gt;&lt;/video&gt;
+
+    &lt;!-- 3. 控制面板 - 調整參數 --&gt;
+    &lt;div id="controls"&gt;
+        &lt;button onclick="setTheme('space')"&gt;太空模式&lt;/button&gt;
+        &lt;button onclick="setTheme('ocean')"&gt;海洋模式&lt;/button&gt;
+    &lt;/div&gt;
+
+    &lt;!-- 4. 載入 MediaPipe --&gt;
+    &lt;script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js"&gt;&lt;/script&gt;
+    &lt;script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js"&gt;&lt;/script&gt;
+
+    &lt;script&gt;
+        // JavaScript 程式碼放這裡
+    &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+
+                <div class="box code-note">
+                    <strong>重點說明：</strong><br>
+                    • <code>&lt;canvas&gt;</code> - 用於繪製粒子的畫布<br>
+                    • <code>&lt;video&gt;</code> - 顯示攝影機畫面並供 MediaPipe 分析<br>
+                    • <code>autoplay playsinline</code> - 讓 video 自動播放且不全螢幕
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Step 2 CSS 樣式 -->
+        <div class="slide">
+            <div class="content-card">
+                <div class="step-title">
+                    <span class="step-badge">2</span>
+                    <h3>設定 CSS 樣式</h3>
+                </div>
+
+                <p>設定畫布全螢幕、攝影機預覽位置：</p>
+
+                <pre>&lt;style&gt;
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    overflow: hidden;           /* 隱藏捲軸 */
+    background: #0a0a20;        /* 深色背景 */
+}
+
+/* 粒子畫布 - 佔滿整個螢幕 */
+#particleCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* 攝影機預覽 - 右下角小視窗 */
+#webcamPreview {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 200px;
+    height: 150px;
+    border: 3px solid rgba(255, 0, 255, 0.5);
+    border-radius: 15px;
+    z-index: 100;
+    transform: scaleX(-1);      /* 鏡像翻轉，更直覺 */
+    object-fit: cover;
+}
+
+/* 控制面板 */
+#controls {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+}
+&lt;/style&gt;</pre>
+
+                <div class="box info">
+                    <strong>關鍵點：</strong><code>transform: scaleX(-1)</code> 會將攝影機畫面水平翻轉，讓使用者看到的是鏡像畫面（像照鏡子），操作起來更直覺！
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: Step 3 全域變數 -->
+        <div class="slide">
+            <div class="content-card">
+                <div class="step-title">
+                    <span class="step-badge">3</span>
+                    <h3>定義全域變數</h3>
+                </div>
+
+                <p>在 JavaScript 開頭定義需要用到的變數：</p>
+
+                <pre>// ============================================
+// 全域變數設定
+// ============================================
+
+// 取得 HTML 元素
+const canvas = document.getElementById('particleCanvas');
+const ctx = canvas.getContext('2d');  // 2D 繪圖環境
+const video = document.getElementById('webcamPreview');
+
+// 粒子陣列 - 存放所有粒子
+let particles = [];
+
+// 參數設定
+let particleCount = 20000;    // 粒子數量
+let particleSize = 3;         // 粒子大小
+let attractForce = 0.05;      // 吸引力強度
+
+// 手部追蹤資料 - 存放偵測到的手的位置
+let handPositions = [];
+
+// 主題設定
+const themes = {
+    space: {
+        background: '#0a0a20',
+        colors: ['#ffffff', '#88ccff', '#ff88cc', '#aaddff']
+    },
+    ocean: {
+        background: '#001a1a',
+        colors: ['#00ff88', '#00ffff', '#0088ff', '#00ffaa']
+    }
+};
+let currentTheme = 'space';   // 目前使用的主題</pre>
+
+                <div class="box tip">
+                    <strong>設計技巧：</strong>將主題設定獨立成物件，之後要新增「火山」「極光」等主題時，只需新增一個物件即可，不用改動其他程式碼。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Step 4 初始化粒子 -->
+        <div class="slide">
+            <div class="content-card">
+                <div class="step-title">
+                    <span class="step-badge">4</span>
+                    <h3>建立粒子系統</h3>
+                </div>
+
+                <p>初始化數萬顆粒子，每顆粒子有位置、速度、顏色等屬性：</p>
+
+                <pre>// ============================================
+// 粒子系統
+// ============================================
+
+function initParticles() {
+    particles = [];  // 清空粒子陣列
+    const theme = themes[currentTheme];
+
+    // 建立指定數量的粒子
+    for (let i = 0; i &lt; particleCount; i++) {
+        particles.push({
+            // 位置 - 隨機分布在畫布上
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+
+            // 速度 - 初始為隨機微小值
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: (Math.random() - 0.5) * 0.5,
+
+            // 顏色 - 從主題顏色中隨機選擇
+            color: theme.colors[Math.floor(Math.random() * theme.colors.length)],
+
+            // 大小 - 隨機變化
+            size: Math.random() * particleSize + 1
+        });
+    }
+
+    console.log(`已建立 ${particles.length} 顆粒子`);
+}</pre>
+
+                <div class="box code-note">
+                    <strong>粒子屬性解釋：</strong><br>
+                    • <code>x, y</code> - 粒子在畫布上的位置<br>
+                    • <code>vx, vy</code> - 粒子的速度（每幀移動的距離）<br>
+                    • <code>color</code> - 粒子的顏色<br>
+                    • <code>size</code> - 粒子的半徑
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Step 5 手勢偵測 -->
+        <div class="slide">
+            <div class="content-card">
+                <div class="step-title">
+                    <span class="step-badge">5</span>
+                    <h3>設定手勢偵測（MediaPipe）</h3>
+                </div>
+
+                <p>使用 MediaPipe Hands API 偵測手部位置：</p>
+
+                <pre>// ============================================
+// 手勢追蹤
+// ============================================
+
+async function initHandTracking() {
+    // 建立 Hands 物件
+    const hands = new Hands({
+        locateFile: (file) =&gt; {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`;
+        }
+    });
+
+    // 設定偵測參數
+    hands.setOptions({
+        maxNumHands: 2,              // 最多追蹤 2 隻手
+        modelComplexity: 1,          // 模型複雜度 (0-2)
+        minDetectionConfidence: 0.7, // 偵測信心度門檻
+        minTrackingConfidence: 0.5   // 追蹤信心度門檻
+    });
+
+    // 設定結果回呼函數
+    hands.onResults(onHandResults);
+
+    // 啟動攝影機
+    const camera = new Camera(video, {
+        onFrame: async () =&gt; {
+            await hands.send({ image: video });
+        },
+        width: 640,
+        height: 480
+    });
+
+    await camera.start();
+    console.log('攝影機已啟動');
+}</pre>
+
+                <div class="box warning">
+                    <strong>注意：</strong>使用攝影機需要 HTTPS 或 localhost 環境。直接用 <code>file://</code> 開啟可能無法存取攝影機。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: Step 5-2 處理手勢結果 -->
+        <div class="slide">
+            <div class="content-card">
+                <div class="step-title">
+                    <span class="step-badge">5</span>
+                    <h3>處理手勢偵測結果（續）</h3>
+                </div>
+
+                <p>將 MediaPipe 偵測到的手部座標轉換為畫布座標：</p>
+
+                <pre>// 處理偵測結果
+function onHandResults(results) {
+    handPositions = [];  // 清空上一幀的資料
+
+    // 檢查是否有偵測到手
+    if (results.multiHandLandmarks) {
+        // 遍歷每一隻偵測到的手
+        results.multiHandLandmarks.forEach(landmarks =&gt; {
+            // landmarks 是 21 個關鍵點的陣列
+            // 索引 8 是食指指尖
+            const indexTip = landmarks[8];
+
+            // 座標轉換（重要！）
+            // MediaPipe 回傳的是 0~1 的正規化座標
+            // 需要乘以畫布尺寸，並做鏡像翻轉
+            const x = (1 - indexTip.x) * canvas.width;  // 鏡像翻轉
+            const y = indexTip.y * canvas.height;
+
+            // 儲存手的位置
+            handPositions.push({ x, y });
+        });
+    }
+}</pre>
+
+                <div class="two-col">
+                    <div class="col-box">
+                        <h4>手部 21 個關鍵點</h4>
+                        <p style="font-size: 14px;">
+                            0: 手腕<br>
+                            4: 大拇指指尖<br>
+                            <strong>8: 食指指尖</strong> ← 我們用這個<br>
+                            12: 中指指尖<br>
+                            16: 無名指指尖<br>
+                            20: 小指指尖
+                        </p>
+                    </div>
+                    <div class="col-box">
+                        <h4>座標轉換公式</h4>
+                        <p style="font-size: 14px;">
+                            <code>x = (1 - landmark.x) * width</code><br>
+                            因為攝影機畫面是鏡像的，所以 x 要用 1 減去再乘寬度
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: Step 6 更新粒子 -->
+        <div class="slide">
+            <div class="content-card">
+                <div class="step-title">
+                    <span class="step-badge">6</span>
+                    <h3>更新粒子位置（物理運算）</h3>
+                </div>
+
+                <p>每一幀計算粒子受到的力，更新速度與位置：</p>
+
+                <pre>function updateParticles() {
+    particles.forEach(p =&gt; {
+        // 計算來自手部的吸引力
+        let ax = 0, ay = 0;  // 加速度
+
+        handPositions.forEach(hand =&gt; {
+            // 計算粒子與手的距離
+            const dx = hand.x - p.x;
+            const dy = hand.y - p.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // 在一定範圍內才有吸引力
+            if (dist &lt; 300 &amp;&amp; dist &gt; 10) {
+                // 距離越近，力越大（但不會無限大）
+                const force = attractForce * (1 - dist / 300);
+                ax += (dx / dist) * force * 50;
+                ay += (dy / dist) * force * 50;
+            }
+        });
+
+        // 更新速度
+        p.vx += ax;
+        p.vy += ay;
+
+        // 速度阻尼（讓粒子慢慢停下來）
+        p.vx *= 0.95;
+        p.vy *= 0.95;
+
+        // 隨機漂移（讓粒子有生命感）
+        p.vx += (Math.random() - 0.5) * 0.1;
+        p.vy += (Math.random() - 0.5) * 0.1;
+
+        // 更新位置
+        p.x += p.vx;
+        p.y += p.vy;
+
+        // 邊界處理（從另一邊出現）
+        if (p.x &lt; 0) p.x = canvas.width;
+        if (p.x &gt; canvas.width) p.x = 0;
+        if (p.y &lt; 0) p.y = canvas.height;
+        if (p.y &gt; canvas.height) p.y = 0;
+    });
+}</pre>
+            </div>
+        </div>
+
+        <!-- Slide 11: Step 7 繪製粒子 -->
+        <div class="slide">
+            <div class="content-card">
+                <div class="step-title">
+                    <span class="step-badge">7</span>
+                    <h3>繪製粒子到畫布</h3>
+                </div>
+
+                <p>使用 Canvas 2D API 繪製所有粒子：</p>
+
+                <pre>function drawParticles() {
+    const theme = themes[currentTheme];
+
+    // 清空畫布（填滿背景色）
+    ctx.fillStyle = theme.background;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 繪製每一顆粒子
+    particles.forEach(p =&gt; {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);  // 畫圓
+        ctx.fillStyle = p.color;
+        ctx.fill();
+
+        // 發光效果（可選，會影響效能）
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = p.color;
+    });
+
+    // 繪製手部位置指示圈
+    ctx.shadowBlur = 0;
+    handPositions.forEach(hand =&gt; {
+        // 外圈
+        ctx.beginPath();
+        ctx.arc(hand.x, hand.y, 30, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255, 0, 255, 0.5)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // 發光效果
+        const gradient = ctx.createRadialGradient(
+            hand.x, hand.y, 0,
+            hand.x, hand.y, 80
+        );
+        gradient.addColorStop(0, 'rgba(255, 0, 255, 0.3)');
+        gradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = gradient;
+        ctx.fill();
+    });
+}</pre>
+            </div>
+        </div>
+
+        <!-- Slide 12: Step 8 動畫循環 -->
+        <div class="slide">
+            <div class="content-card">
+                <div class="step-title">
+                    <span class="step-badge">8</span>
+                    <h3>建立動畫循環與初始化</h3>
+                </div>
+
+                <p>使用 <code>requestAnimationFrame</code> 建立流暢的動畫循環：</p>
+
+                <pre>// ============================================
+// 動畫循環
+// ============================================
+
+function animate() {
+    updateParticles();   // 更新粒子位置
+    drawParticles();     // 繪製粒子
+    requestAnimationFrame(animate);  // 下一幀繼續
+}
+
+// ============================================
+// 初始化
+// ============================================
+
+async function init() {
+    // 1. 設定畫布大小
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // 視窗大小改變時重設畫布
+    window.addEventListener('resize', () =&gt; {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    });
+
+    // 2. 初始化粒子
+    initParticles();
+
+    // 3. 初始化手勢偵測
+    await initHandTracking();
+
+    // 4. 開始動畫
+    animate();
+
+    console.log('星海粒子系統已啟動！');
+}
+
+// 啟動！
+init();</pre>
+
+                <div class="box tip">
+                    <strong>為什麼用 requestAnimationFrame？</strong><br>
+                    它會配合螢幕更新頻率（通常 60Hz），比 setInterval 更流暢、更省電！
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 13: 主題切換功能 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>加分功能：主題切換</h2>
+                <p>讓使用者可以切換太空與海洋主題：</p>
+
+                <pre>// 切換主題
+function setTheme(themeName) {
+    currentTheme = themeName;
+
+    // 更新所有粒子的顏色
+    const theme = themes[themeName];
+    particles.forEach(p =&gt; {
+        p.color = theme.colors[
+            Math.floor(Math.random() * theme.colors.length)
+        ];
+    });
+
+    console.log(`已切換到 ${themeName} 主題`);
+}</pre>
+
+                <div class="two-col">
+                    <div class="col-box" style="background: #0a0a20; color: white;">
+                        <h4 style="color: #88ccff;">太空星塵主題</h4>
+                        <p style="font-size: 14px;">
+                            背景：深藍黑色 #0a0a20<br>
+                            粒子：白色、淺藍、粉紅
+                        </p>
+                    </div>
+                    <div class="col-box" style="background: #001a1a; color: white;">
+                        <h4 style="color: #00ff88;">深海微光主題</h4>
+                        <p style="font-size: 14px;">
+                            背景：深海綠 #001a1a<br>
+                            粒子：螢光綠、青色、藍色
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 14: 完整程式碼 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>完整可運行範例</h2>
+                <div class="box info">
+                    <strong>專案已建立！</strong>你可以直接開啟以下檔案體驗：<br><br>
+                    <code style="font-size: 16px;">星海粒子Demo/index.html</code>
+                </div>
+
+                <h3>使用說明</h3>
+                <ol>
+                    <li>用瀏覽器開啟 <code>星海粒子Demo/index.html</code></li>
+                    <li>允許瀏覽器存取攝影機</li>
+                    <li>將手放入攝影機畫面中</li>
+                    <li>移動手指，觀察粒子跟隨移動</li>
+                    <li>使用控制面板調整參數</li>
+                </ol>
+
+                <div class="box warning">
+                    <strong>如果攝影機無法啟動：</strong><br>
+                    1. 確認瀏覽器已允許攝影機權限<br>
+                    2. 使用 Chrome 或 Edge 瀏覽器<br>
+                    3. 如果是本地檔案，可能需要使用本地伺服器（如 VS Code Live Server）
+                </div>
+
+                <a href="星海粒子Demo/index.html" class="demo-btn" target="_blank" style="display: block; text-align: center;">
+                    開啟完整 Demo
+                </a>
+            </div>
+        </div>
+
+        <!-- Slide 15: 教學應用 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>教學應用建議</h2>
+                <div class="two-col">
+                    <div class="col-box">
+                        <h4>課堂引起動機</h4>
+                        <ul style="font-size: 15px;">
+                            <li>太空單元：展示星塵粒子，討論宇宙中的物質</li>
+                            <li>海洋單元：展示深海發光，介紹生物發光現象</li>
+                            <li>物理單元：展示力與運動的關係</li>
+                        </ul>
+                    </div>
+                    <div class="col-box">
+                        <h4>學生專題製作</h4>
+                        <ul style="font-size: 15px;">
+                            <li>修改主題顏色，設計新的視覺風格</li>
+                            <li>調整物理參數，觀察不同效果</li>
+                            <li>加入新功能（音樂互動、更多手勢）</li>
+                        </ul>
+                    </div>
+                    <div class="col-box">
+                        <h4>簡報展示</h4>
+                        <ul style="font-size: 15px;">
+                            <li>輸入關鍵字讓粒子排列成文字</li>
+                            <li>用手勢控制吸引觀眾注意力</li>
+                            <li>切換主題配合不同內容</li>
+                        </ul>
+                    </div>
+                    <div class="col-box">
+                        <h4>程式教學</h4>
+                        <ul style="font-size: 15px;">
+                            <li>介紹 Canvas 2D 繪圖</li>
+                            <li>說明粒子系統原理</li>
+                            <li>體驗 AI 視覺辨識應用</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 16: 總結 -->
+        <div class="slide">
+            <div class="content-card cover-slide">
+                <h2>Part 3 總結</h2>
+
+                <table class="info-table" style="margin: 30px 0;">
+                    <tr>
+                        <th>步驟</th>
+                        <th>內容</th>
+                    </tr>
+                    <tr><td>Step 1</td><td>建立 HTML 基本結構</td></tr>
+                    <tr><td>Step 2</td><td>設定 CSS 樣式</td></tr>
+                    <tr><td>Step 3</td><td>定義全域變數</td></tr>
+                    <tr><td>Step 4</td><td>建立粒子系統</td></tr>
+                    <tr><td>Step 5</td><td>設定手勢偵測 (MediaPipe)</td></tr>
+                    <tr><td>Step 6</td><td>更新粒子位置（物理運算）</td></tr>
+                    <tr><td>Step 7</td><td>繪製粒子到畫布</td></tr>
+                    <tr><td>Step 8</td><td>建立動畫循環</td></tr>
+                </table>
+
+                <div class="box tip" style="text-align: left;">
+                    <strong>恭喜完成！</strong>你已經學會如何建立一個手勢控制的粒子系統。<br>
+                    這個專案結合了：Canvas 繪圖、物理模擬、AI 視覺辨識等技術。<br>
+                    試著修改參數、加入新功能，打造屬於你自己的版本！
+                </div>
+
+                <a href="星海粒子Demo/index.html" class="demo-btn" target="_blank">
+                    再次體驗 Demo
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 導航箭頭 -->
+    <button class="nav-arrow prev-arrow" id="prevBtn" onclick="changeSlide(-1)">&#10094;</button>
+    <button class="nav-arrow next-arrow" id="nextBtn" onclick="changeSlide(1)">&#10095;</button>
+
+    <!-- 頁碼 -->
+    <div class="indicators" id="indicatorContainer"></div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        function init() {
+            createIndicators();
+            showSlide(0);
+            updateButtons();
+            document.addEventListener('keydown', handleKeydown);
+        }
+
+        function handleKeydown(e) {
+            if (e.key === 'ArrowLeft') changeSlide(-1);
+            if (e.key === 'ArrowRight') changeSlide(1);
+        }
+
+        function createIndicators() {
+            const container = document.getElementById('indicatorContainer');
+            container.innerHTML = '';
+            slides.forEach((_, index) => {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                dot.onclick = () => goToSlide(index);
+                container.appendChild(dot);
+            });
+        }
+
+        function showSlide(index) {
+            if (index < 0) index = 0;
+            if (index >= totalSlides) index = totalSlides - 1;
+
+            slides.forEach(slide => slide.classList.remove('active'));
+            slides[index].classList.add('active');
+            currentSlide = index;
+
+            const dots = document.querySelectorAll('.dot');
+            dots.forEach((dot, idx) => {
+                dot.classList.toggle('active', idx === index);
+            });
+
+            updateButtons();
+        }
+
+        function changeSlide(direction) {
+            showSlide(currentSlide + direction);
+        }
+
+        function goToSlide(index) {
+            showSlide(index);
+        }
+
+        function updateButtons() {
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

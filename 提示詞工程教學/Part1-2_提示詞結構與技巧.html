@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1-2 提示詞結構與技巧 - 提示詞工程實戰教學</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a237e 50%, #283593 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            color: #333;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image:
+                radial-gradient(2px 2px at 20px 30px, white, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 90px 40px, white, transparent);
+            background-size: 550px 250px;
+            animation: twinkle 8s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+        }
+
+        .nav-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(26, 35, 126, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 10000;
+        }
+
+        .nav-title {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #64b5f6, #81d4fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-buttons { display: flex; gap: 12px; }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(100, 181, 246, 0.3);
+            border-color: #64b5f6;
+        }
+
+        .nav-arrow {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(26, 35, 126, 0.8);
+            color: white;
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: 2px solid rgba(100, 181, 246, 0.5);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 9000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-arrow:hover {
+            background: rgba(57, 73, 171, 0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+        .prev-arrow { left: 30px; }
+        .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .slide-container {
+            width: 100%;
+            height: 100vh;
+            padding-top: 60px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .slide {
+            position: absolute;
+            top: 60px; left: 0;
+            width: 100%;
+            height: calc(100vh - 60px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 10;
+        }
+
+        .slide.active {
+            display: flex;
+            opacity: 1;
+            z-index: 20;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.97);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            padding: 40px 50px;
+            max-width: 1350px;
+            width: 95%;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 42px;
+            margin-bottom: 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #1a237e, #0288d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        h2 {
+            color: #1a237e;
+            font-size: 30px;
+            margin-bottom: 25px;
+            border-bottom: 4px solid;
+            border-image: linear-gradient(90deg, #1a237e, #0288d1) 1;
+            padding-bottom: 12px;
+        }
+        h3 { color: #283593; font-size: 22px; margin: 20px 0 12px 0; }
+        h4 { color: #3949ab; font-size: 18px; margin: 15px 0 8px 0; }
+
+        p, li {
+            font-size: 17px;
+            line-height: 1.8;
+            color: #444;
+            margin-bottom: 10px;
+        }
+
+        ul, ol {
+            margin-left: 25px;
+            margin-bottom: 15px;
+        }
+
+        code {
+            background: linear-gradient(135deg, #e8eaf6, #e1f5fe);
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-family: 'Consolas', monospace;
+            color: #1a237e;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: linear-gradient(135deg, #0c1445, #1a237e);
+            color: #b3e5fc;
+            padding: 20px 25px;
+            border-radius: 14px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-size: 14px;
+            line-height: 1.6;
+            font-family: 'Consolas', monospace;
+            border: 1px solid rgba(100, 181, 246, 0.3);
+            white-space: pre-wrap;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(26, 35, 126, 0.08), rgba(2, 136, 209, 0.08));
+            border-left: 5px solid #1a237e;
+            padding: 20px 25px;
+            border-radius: 0 15px 15px 0;
+            margin: 20px 0;
+        }
+
+        .highlight-box h4 {
+            color: #1a237e;
+            margin-top: 0;
+        }
+
+        /* RTFC 框架卡片 */
+        .framework-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .framework-card {
+            padding: 25px;
+            border-radius: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .framework-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 5px;
+            height: 100%;
+        }
+
+        .framework-card.role {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        }
+        .framework-card.role::before { background: #1565c0; }
+        .framework-card.role h4 { color: #1565c0; }
+
+        .framework-card.task {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+        }
+        .framework-card.task::before { background: #2e7d32; }
+        .framework-card.task h4 { color: #2e7d32; }
+
+        .framework-card.format {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+        }
+        .framework-card.format::before { background: #e65100; }
+        .framework-card.format h4 { color: #e65100; }
+
+        .framework-card.constraint {
+            background: linear-gradient(135deg, #fce4ec, #f8bbd0);
+        }
+        .framework-card.constraint::before { background: #c2185b; }
+        .framework-card.constraint h4 { color: #c2185b; }
+
+        .framework-card h4 {
+            font-size: 20px;
+            margin: 0 0 10px 10px;
+        }
+
+        .framework-card p {
+            margin-left: 10px;
+            font-size: 15px;
+        }
+
+        .example-box {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border: 1px solid #e0e0e0;
+        }
+
+        .example-box h4 {
+            color: #1a237e;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .technique-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .technique-item {
+            background: linear-gradient(135deg, #e8eaf6, #e3f2fd);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .technique-item h5 {
+            color: #1a237e;
+            margin-bottom: 5px;
+        }
+
+        .technique-item p {
+            font-size: 13px;
+            margin: 0;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .comparison-box {
+            padding: 20px;
+            border-radius: 15px;
+        }
+
+        .comparison-box.bad {
+            background: linear-gradient(135deg, #ffebee, #fce4ec);
+            border-left: 4px solid #c62828;
+        }
+
+        .comparison-box.good {
+            background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+            border-left: 4px solid #2e7d32;
+        }
+
+        .comparison-box h4 { margin-top: 0; }
+        .comparison-box.bad h4 { color: #c62828; }
+        .comparison-box.good h4 { color: #2e7d32; }
+
+        .practice-box {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border: 2px dashed #ff9800;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .practice-box h4 {
+            color: #e65100;
+            margin-top: 0;
+        }
+
+        .slide-number {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(26, 35, 126, 0.8);
+            color: white;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 9000;
+        }
+
+        .footer-info {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .content-card { padding: 25px; }
+            h1 { font-size: 28px; }
+            h2 { font-size: 22px; }
+            .framework-grid, .comparison-grid { grid-template-columns: 1fr; }
+            .nav-arrow { width: 45px; height: 45px; font-size: 18px; }
+            .prev-arrow { left: 10px; }
+            .next-arrow { right: 10px; }
+        }
+
+        /* 練習輸入框樣式 */
+        .input-wrapper {
+            position: relative;
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+
+        .practice-input {
+            width: 100%;
+            min-height: 60px;
+            padding: 12px;
+            padding-right: 70px;
+            border: 2px dashed #ff9800;
+            border-radius: 10px;
+            background: #fff;
+            font-size: 15px;
+            font-family: inherit;
+            resize: vertical;
+            line-height: 1.6;
+        }
+
+        .practice-input:focus {
+            outline: none;
+            border-color: #f57c00;
+            box-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
+        }
+
+        .copy-input-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .copy-input-btn:hover {
+            background: linear-gradient(135deg, #f57c00, #ef6c00);
+            transform: scale(1.05);
+        }
+
+        .copy-input-btn.copied, .copy-all-btn.copied {
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+        }
+
+        .copy-all-btn {
+            background: linear-gradient(135deg, #1a237e, #283593);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .copy-all-btn:hover {
+            background: linear-gradient(135deg, #283593, #3949ab);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <span class="nav-title">1-2 提示詞結構與技巧</span>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-btn">首頁</a>
+            <a href="Part1-1_提示詞基本概念.html" class="nav-btn">上一章</a>
+            <a href="Part1-3_進階提示詞模式.html" class="nav-btn">下一章</a>
+            <button class="nav-btn fullscreen-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="nav-btn">YT</a>
+        </div>
+    </nav>
+
+    <button class="nav-arrow prev-arrow" onclick="prevSlide()">◀</button>
+    <button class="nav-arrow next-arrow" onclick="nextSlide()">▶</button>
+
+    <div class="slide-container">
+        <!-- Slide 1: 標題頁 -->
+        <div class="slide active">
+            <div class="content-card" style="text-align: center;">
+                <h1>提示詞結構與技巧</h1>
+                <p style="font-size: 22px; color: #666; margin-bottom: 30px;">
+                    RTFC Framework & Writing Techniques
+                </p>
+                <div class="framework-grid">
+                    <div class="framework-card role">
+                        <h4>R - Role 角色</h4>
+                        <p>讓 AI 扮演特定角色</p>
+                    </div>
+                    <div class="framework-card task">
+                        <h4>T - Task 任務</h4>
+                        <p>明確說明要做什麼</p>
+                    </div>
+                    <div class="framework-card format">
+                        <h4>F - Format 格式</h4>
+                        <p>指定輸出的格式</p>
+                    </div>
+                    <div class="framework-card constraint">
+                        <h4>C - Constraint 限制</h4>
+                        <p>設定邊界和規則</p>
+                    </div>
+                </div>
+                <div class="footer-info">
+                    © 2026 阿亮老師 | 提示詞工程實戰教學
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: RTFC 框架介紹 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>RTFC 提示詞框架</h2>
+
+                <div class="highlight-box">
+                    <h4>什麼是 RTFC？</h4>
+                    <p>RTFC 是一個結構化的提示詞撰寫框架，由四個核心元素組成。使用這個框架可以讓你的提示詞更加完整、有效。</p>
+                </div>
+
+                <div class="framework-grid">
+                    <div class="framework-card role">
+                        <h4>Role（角色）</h4>
+                        <p>告訴 AI 要扮演什麼角色。角色設定會影響 AI 的回應風格、專業度和視角。</p>
+                        <p style="margin-top: 10px;"><strong>範例：</strong>「你是一位資深的國小自然科教師」</p>
+                    </div>
+                    <div class="framework-card task">
+                        <h4>Task（任務）</h4>
+                        <p>清楚描述你要 AI 完成什麼任務。任務要具體、可執行。</p>
+                        <p style="margin-top: 10px;"><strong>範例：</strong>「請設計一份 40 分鐘的教案」</p>
+                    </div>
+                    <div class="framework-card format">
+                        <h4>Format（格式）</h4>
+                        <p>指定你希望的輸出格式。可以是表格、列表、段落、JSON 等。</p>
+                        <p style="margin-top: 10px;"><strong>範例：</strong>「請用表格呈現，包含時間、活動、教具」</p>
+                    </div>
+                    <div class="framework-card constraint">
+                        <h4>Constraint（限制）</h4>
+                        <p>設定限制條件，告訴 AI 什麼不要做，或需要遵守的規則。</p>
+                        <p style="margin-top: 10px;"><strong>範例：</strong>「避免使用專業術語，適合五年級學生」</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Role 詳解 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Role（角色）詳解</h2>
+
+                <p>角色設定是提示詞的第一步，它決定了 AI 會以什麼「身份」來回應你。</p>
+
+                <h3>為什麼角色很重要？</h3>
+                <ul>
+                    <li><strong>專業視角</strong>：不同角色有不同的專業知識和表達方式</li>
+                    <li><strong>語氣調整</strong>：醫生會用嚴謹的語氣，兒童作家會用活潑的語氣</li>
+                    <li><strong>深度控制</strong>：專家角色會給出更深入的分析</li>
+                </ul>
+
+                <h3>角色設定範例</h3>
+                <div class="example-box">
+                    <h4>教育領域</h4>
+                    <pre>你是一位有 20 年經驗的國中數學教師，擅長用生活化的例子解釋抽象概念。</pre>
+                </div>
+
+                <div class="example-box">
+                    <h4>行銷領域</h4>
+                    <pre>你是一位專精於社群行銷的文案專家，了解 Z 世代的網路用語和溝通方式。</pre>
+                </div>
+
+                <div class="example-box">
+                    <h4>技術領域</h4>
+                    <pre>你是一位資深前端工程師，專精於 React 和 TypeScript，注重程式碼可讀性和效能。</pre>
+                </div>
+
+                <div class="highlight-box">
+                    <h4>進階技巧</h4>
+                    <p>可以結合多重角色：「你是一位同時具備教育學和心理學背景的課程設計師」</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Task 詳解 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Task（任務）詳解</h2>
+
+                <p>任務是提示詞的核心，要清楚說明你希望 AI 做什麼。</p>
+
+                <h3>好任務的特點</h3>
+                <div class="technique-list">
+                    <div class="technique-item">
+                        <h5>明確</h5>
+                        <p>說清楚要做「什麼」</p>
+                    </div>
+                    <div class="technique-item">
+                        <h5>具體</h5>
+                        <p>包含數量、範圍</p>
+                    </div>
+                    <div class="technique-item">
+                        <h5>可執行</h5>
+                        <p>AI 能實際完成</p>
+                    </div>
+                    <div class="technique-item">
+                        <h5>有目的</h5>
+                        <p>說明為何需要</p>
+                    </div>
+                </div>
+
+                <h3>任務描述對照</h3>
+                <div class="comparison-grid">
+                    <div class="comparison-box bad">
+                        <h4>模糊的任務</h4>
+                        <ul style="font-size: 14px;">
+                            <li>「寫點東西」</li>
+                            <li>「幫我處理資料」</li>
+                            <li>「做個報告」</li>
+                        </ul>
+                    </div>
+                    <div class="comparison-box good">
+                        <h4>明確的任務</h4>
+                        <ul style="font-size: 14px;">
+                            <li>「撰寫一篇 500 字的產品介紹文案」</li>
+                            <li>「將這份 CSV 資料整理成依日期排序的摘要表」</li>
+                            <li>「製作一份 10 頁的 Q3 銷售報告大綱」</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="example-box">
+                    <h4>完整任務範例</h4>
+                    <pre>請設計 5 個適合國小三年級學生的數學應用題，
+主題是「購物與金錢」，
+每題包含情境描述和計算問題，
+難度由簡單到困難遞增。</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Format 詳解 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Format（格式）詳解</h2>
+
+                <p>格式指定讓你控制 AI 輸出的呈現方式，確保結果符合你的使用需求。</p>
+
+                <h3>常見格式類型</h3>
+                <div class="technique-list">
+                    <div class="technique-item">
+                        <h5>表格</h5>
+                        <p>比較、清單、數據</p>
+                    </div>
+                    <div class="technique-item">
+                        <h5>條列式</h5>
+                        <p>步驟、重點、列表</p>
+                    </div>
+                    <div class="technique-item">
+                        <h5>段落</h5>
+                        <p>文章、說明、故事</p>
+                    </div>
+                    <div class="technique-item">
+                        <h5>結構化</h5>
+                        <p>JSON、XML、YAML</p>
+                    </div>
+                </div>
+
+                <h3>格式指定範例</h3>
+                <div class="example-box">
+                    <h4>表格格式</h4>
+                    <pre>請用表格呈現，欄位包含：
+| 時間 | 教學活動 | 教具 | 評量方式 |</pre>
+                </div>
+
+                <div class="example-box">
+                    <h4>結構化格式</h4>
+                    <pre>請用以下結構回答：
+## 主題
+### 重點一
+- 說明...
+### 重點二
+- 說明...</pre>
+                </div>
+
+                <div class="example-box">
+                    <h4>JSON 格式</h4>
+                    <pre>請以 JSON 格式輸出，包含以下欄位：
+{
+  "title": "標題",
+  "summary": "摘要",
+  "keyPoints": ["重點1", "重點2"],
+  "difficulty": "難度等級"
+}</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: Constraint 詳解 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Constraint（限制）詳解</h2>
+
+                <p>限制條件幫助 AI 避開不需要的內容，確保輸出更符合你的期望。</p>
+
+                <h3>常見限制類型</h3>
+                <div class="framework-grid">
+                    <div class="framework-card" style="background: linear-gradient(135deg, #f3e5f5, #e1bee7);">
+                        <h4 style="color: #7b1fa2;">長度限制</h4>
+                        <p>「控制在 300 字以內」<br>「每點不超過 50 字」</p>
+                    </div>
+                    <div class="framework-card" style="background: linear-gradient(135deg, #e0f7fa, #b2ebf2);">
+                        <h4 style="color: #00838f;">語言限制</h4>
+                        <p>「使用繁體中文」<br>「避免使用專業術語」</p>
+                    </div>
+                    <div class="framework-card" style="background: linear-gradient(135deg, #fff8e1, #ffecb3);">
+                        <h4 style="color: #ff8f00;">內容限制</h4>
+                        <p>「不要包含政治敏感內容」<br>「避免負面情緒的用語」</p>
+                    </div>
+                    <div class="framework-card" style="background: linear-gradient(135deg, #fbe9e7, #ffccbc);">
+                        <h4 style="color: #e64a19;">對象限制</h4>
+                        <p>「適合 8-10 歲兒童閱讀」<br>「面向非技術背景的使用者」</p>
+                    </div>
+                </div>
+
+                <h3>限制的撰寫技巧</h3>
+                <ul>
+                    <li><strong>正面表述優先</strong>：「請使用簡單的詞彙」優於「不要用難的字」</li>
+                    <li><strong>具體明確</strong>：「控制在 500 字內」優於「不要太長」</li>
+                    <li><strong>優先順序</strong>：如有多個限制，可標明哪些最重要</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 7: 完整範例 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>RTFC 完整範例</h2>
+
+                <div class="example-box">
+                    <h4>範例一：教案設計</h4>
+                    <pre>【Role】你是一位有 15 年經驗的國小自然科教師，擅長設計互動式教學活動。
+
+【Task】請設計一份 40 分鐘的教案，主題是「認識太陽系的八大行星」，目標是讓學生能夠說出八大行星的名稱和順序。
+
+【Format】請用表格呈現，包含以下欄位：
+| 時間 | 教學階段 | 教師活動 | 學生活動 | 教具 |
+
+【Constraint】
+- 適合國小五年級學生
+- 避免使用太專業的天文術語
+- 包含至少一個動手操作的活動
+- 總字數控制在 800 字內</pre>
+                </div>
+
+                <div class="example-box">
+                    <h4>範例二：社群文案</h4>
+                    <pre>【Role】你是一位專精於教育類粉絲專頁的社群小編，了解教師社群的喜好和互動模式。
+
+【Task】請為一場「AI 輔助教學工作坊」撰寫 3 則 Facebook 宣傳貼文，分別用於活動前一週、前三天、當天早上發布。
+
+【Format】每則貼文包含：
+1. 吸睛開頭（一句話）
+2. 主要內容（3-5 行）
+3. 行動呼籲
+4. 建議的配圖描述
+
+【Constraint】
+- 語氣親切但專業
+- 每則貼文 150-200 字
+- 不使用過多表情符號（每則最多 3 個）
+- 包含工作坊的時間地點連結佔位符</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: 其他實用技巧 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>其他實用撰寫技巧</h2>
+
+                <h3>技巧一：提供範例（Few-shot）</h3>
+                <div class="example-box">
+                    <pre>請依照以下範例格式生成更多內容：
+
+範例輸入：蘋果
+範例輸出：蘋果富含維生素 C 和膳食纖維，每天一顆蘋果有助於維持腸道健康。
+
+現在請處理：香蕉</pre>
+                </div>
+
+                <h3>技巧二：分步驟思考</h3>
+                <div class="example-box">
+                    <pre>請一步一步分析這個問題：
+1. 首先，確認問題的核心是什麼
+2. 接著，列出可能的解決方案
+3. 然後，評估每個方案的優缺點
+4. 最後，給出你的建議</pre>
+                </div>
+
+                <h3>技巧三：設定情境</h3>
+                <div class="example-box">
+                    <pre>情境：你正在準備一場給國小老師的研習，主題是如何將 AI 融入教學。現場會有 30 位對 AI 不太熟悉的老師。
+
+在這個情境下，請設計開場的 5 分鐘破冰活動。</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: 常見問題排解 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>常見問題與排解</h2>
+
+                <h3>問題一：AI 回應太長或太短</h3>
+                <div class="highlight-box">
+                    <p><strong>解法：</strong>明確指定長度限制</p>
+                    <pre style="background: #fff; color: #333; border: 1px solid #ddd;">「請用 200-300 字說明」、「每點控制在 50 字內」</pre>
+                </div>
+
+                <h3>問題二：AI 回應不夠專業或太專業</h3>
+                <div class="highlight-box">
+                    <p><strong>解法：</strong>設定明確的對象和角色</p>
+                    <pre style="background: #fff; color: #333; border: 1px solid #ddd;">「請用國小學生能理解的語言說明」、「以專業期刊的語氣撰寫」</pre>
+                </div>
+
+                <h3>問題三：AI 回應偏離主題</h3>
+                <div class="highlight-box">
+                    <p><strong>解法：</strong>加入「專注」指令和排除條件</p>
+                    <pre style="background: #fff; color: #333; border: 1px solid #ddd;">「請專注於 X 主題，不要延伸到 Y 和 Z」</pre>
+                </div>
+
+                <h3>問題四：AI 回應格式不對</h3>
+                <div class="highlight-box">
+                    <p><strong>解法：</strong>提供明確的格式範例</p>
+                    <pre style="background: #fff; color: #333; border: 1px solid #ddd;">「請完全按照以下格式輸出：[格式範例]」</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: 實作練習 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>動手練習：撰寫完整提示詞</h2>
+
+                <p>使用 RTFC 框架，完成以下練習。</p>
+
+                <div class="practice-box">
+                    <h4>練習題目</h4>
+                    <p>請設計一個提示詞，讓 AI 幫你產生「海洋生態」主題的國小自然科學習單。</p>
+
+                    <p style="margin-top: 15px;"><strong>你的 RTFC 提示詞：</strong></p>
+
+                    <p><strong>【Role】</strong></p>
+                    <div class="input-wrapper">
+                        <textarea class="practice-input" id="role-input" placeholder="輸入你的角色設定..."></textarea>
+                        <button class="copy-input-btn" onclick="copyInput('role-input')">複製</button>
+                    </div>
+
+                    <p><strong>【Task】</strong></p>
+                    <div class="input-wrapper">
+                        <textarea class="practice-input" id="task-input" placeholder="輸入你的任務描述..."></textarea>
+                        <button class="copy-input-btn" onclick="copyInput('task-input')">複製</button>
+                    </div>
+
+                    <p><strong>【Format】</strong></p>
+                    <div class="input-wrapper">
+                        <textarea class="practice-input" id="format-input" placeholder="輸入你的格式要求..."></textarea>
+                        <button class="copy-input-btn" onclick="copyInput('format-input')">複製</button>
+                    </div>
+
+                    <p><strong>【Constraint】</strong></p>
+                    <div class="input-wrapper">
+                        <textarea class="practice-input" id="constraint-input" placeholder="輸入你的限制條件..."></textarea>
+                        <button class="copy-input-btn" onclick="copyInput('constraint-input')">複製</button>
+                    </div>
+
+                    <div style="margin-top: 20px; text-align: center;">
+                        <button class="copy-all-btn" onclick="copyAllRTFC()">複製完整提示詞</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: 總結 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>本節重點回顧</h2>
+
+                <div class="framework-grid">
+                    <div class="framework-card role">
+                        <h4>R - Role</h4>
+                        <p>設定 AI 的角色身份，影響回應的專業度和視角</p>
+                    </div>
+                    <div class="framework-card task">
+                        <h4>T - Task</h4>
+                        <p>明確描述任務，要具體、可執行、有目的</p>
+                    </div>
+                    <div class="framework-card format">
+                        <h4>F - Format</h4>
+                        <p>指定輸出格式，確保結果符合使用需求</p>
+                    </div>
+                    <div class="framework-card constraint">
+                        <h4>C - Constraint</h4>
+                        <p>設定限制條件，避免不需要的內容</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box" style="margin-top: 30px;">
+                    <h4>下一節預告</h4>
+                    <p>在 1-3 節中，我們將學習進階提示詞模式：<strong>Few-shot Learning、Chain of Thought、Self-consistency</strong>，讓你的提示詞更上一層樓！</p>
+                </div>
+
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="Part1-3_進階提示詞模式.html" class="nav-btn" style="display: inline-block; background: linear-gradient(135deg, #1a237e, #0288d1); border: none; padding: 15px 40px; font-size: 18px;">
+                        前往下一節 →
+                    </a>
+                </div>
+
+                <div class="footer-info">
+                    © 2026 阿亮老師 | 提示詞工程實戰教學
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide-number">
+        <span id="currentSlide">1</span> / <span id="totalSlides">11</span>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        document.getElementById('totalSlides').textContent = totalSlides;
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.classList.remove('active');
+                if (i === index) {
+                    slide.classList.add('active');
+                }
+            });
+            document.getElementById('currentSlide').textContent = index + 1;
+            document.querySelector('.prev-arrow').disabled = index === 0;
+            document.querySelector('.next-arrow').disabled = index === totalSlides - 1;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+
+        showSlide(0);
+
+        // 複製單一輸入框內容
+        function copyInput(id) {
+            const textarea = document.getElementById(id);
+            const btn = textarea.parentElement.querySelector('.copy-input-btn');
+
+            if (textarea.value.trim() === '') {
+                alert('請先輸入內容再複製！');
+                return;
+            }
+
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                btn.textContent = '已複製！';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = '複製';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        // 複製完整 RTFC 提示詞
+        function copyAllRTFC() {
+            const role = document.getElementById('role-input').value.trim();
+            const task = document.getElementById('task-input').value.trim();
+            const format = document.getElementById('format-input').value.trim();
+            const constraint = document.getElementById('constraint-input').value.trim();
+
+            if (!role && !task && !format && !constraint) {
+                alert('請先填寫至少一個欄位！');
+                return;
+            }
+
+            let fullPrompt = '';
+            if (role) fullPrompt += '【Role】\n' + role + '\n\n';
+            if (task) fullPrompt += '【Task】\n' + task + '\n\n';
+            if (format) fullPrompt += '【Format】\n' + format + '\n\n';
+            if (constraint) fullPrompt += '【Constraint】\n' + constraint;
+
+            const btn = document.querySelector('.copy-all-btn');
+            navigator.clipboard.writeText(fullPrompt.trim()).then(() => {
+                btn.textContent = '已複製完整提示詞！';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = '複製完整提示詞';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        // 全螢幕切換
+        function toggleFullscreen() {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                btn.textContent = '離開全螢幕';
+            } else {
+                document.exitFullscreen();
+                btn.textContent = '全螢幕';
+            }
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) {
+                btn.textContent = '全螢幕';
+            }
+        });
+    </script>
+</body>
+</html>

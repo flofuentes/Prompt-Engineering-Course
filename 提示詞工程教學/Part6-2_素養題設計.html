@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6-2 素養題與跨領域探究題設計 - AI 協作評量設計</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a237e 50%, #283593 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            color: #333;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(2px 2px at 20px 30px, white, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent);
+            background-size: 550px 250px;
+            animation: twinkle 8s ease-in-out infinite;
+            pointer-events: none; z-index: 0;
+        }
+        @keyframes twinkle { 0%, 100% { opacity: 0.8; } 50% { opacity: 0.4; } }
+        .nav-bar {
+            position: fixed; top: 0; left: 0; right: 0; height: 60px;
+            background: rgba(26, 35, 126, 0.95); backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 30px; z-index: 10000;
+        }
+        .nav-title {
+            font-size: 20px; font-weight: 700;
+            background: linear-gradient(90deg, #ff8f00, #ffb300);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .nav-buttons { display: flex; gap: 12px; }
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white; padding: 8px 18px; border-radius: 20px; cursor: pointer;
+            font-size: 14px; font-weight: 600; text-decoration: none; transition: all 0.3s ease;
+        }
+        .nav-btn:hover { background: rgba(255, 143, 0, 0.3); border-color: #ff8f00; }
+        .nav-arrow {
+            position: fixed; top: 50%; transform: translateY(-50%);
+            background: rgba(26, 35, 126, 0.8); color: white;
+            width: 60px; height: 60px; border-radius: 50%;
+            border: 2px solid rgba(255, 143, 0, 0.5); font-size: 24px;
+            cursor: pointer; z-index: 9000; transition: all 0.3s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .nav-arrow:hover { background: rgba(57, 73, 171, 0.9); transform: translateY(-50%) scale(1.1); }
+        .prev-arrow { left: 30px; } .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+        .slide-container { width: 100%; height: 100vh; padding-top: 60px; position: relative; z-index: 1; }
+        .slide {
+            position: absolute; top: 60px; left: 0; width: 100%; height: calc(100vh - 60px);
+            display: none; align-items: center; justify-content: center; padding: 40px;
+            opacity: 0; transition: opacity 0.4s ease; z-index: 10;
+        }
+        .slide.active { display: flex; opacity: 1; z-index: 20; }
+        .content-card {
+            background: rgba(255, 255, 255, 0.97); border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); padding: 35px 45px;
+            max-width: 1400px; width: 96%; max-height: 88vh; overflow-y: auto;
+        }
+        h1 { font-size: 38px; margin-bottom: 15px; text-align: center;
+            background: linear-gradient(135deg, #00695c, #00897b);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { color: #00695c; font-size: 28px; margin-bottom: 20px;
+            border-bottom: 4px solid; border-image: linear-gradient(90deg, #00695c, #00897b) 1; padding-bottom: 10px; }
+        h3 { color: #00796b; font-size: 20px; margin: 18px 0 10px 0; }
+        h4 { color: #00897b; font-size: 17px; margin: 12px 0 8px 0; }
+        p, li { font-size: 16px; line-height: 1.7; color: #444; margin-bottom: 8px; }
+        ul, ol { margin-left: 25px; margin-bottom: 12px; }
+        .prompt-box {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border: 3px solid #ff6f00; padding: 20px; border-radius: 15px;
+            margin: 15px 0; position: relative;
+        }
+        .prompt-box::before {
+            content: 'AI 提示詞'; position: absolute; top: -12px; left: 20px;
+            background: #ff6f00; color: white; padding: 4px 15px;
+            border-radius: 10px; font-size: 13px; font-weight: 700;
+        }
+        .prompt-box pre {
+            background: #fff; padding: 15px; border-radius: 10px;
+            font-family: 'Consolas', monospace; font-size: 14px; line-height: 1.5;
+            white-space: pre-wrap; margin: 10px 0 0 0; border: 1px solid #ffcc80;
+        }
+        .highlight-box {
+            background: linear-gradient(135deg, #e0f2f1, #b2dfdb);
+            border-left: 5px solid #00695c; padding: 18px 22px;
+            border-radius: 0 15px 15px 0; margin: 15px 0;
+        }
+        .highlight-box h4 { color: #00695c; margin-top: 0; }
+        .example-box {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-left: 5px solid #1976d2; padding: 18px 22px;
+            border-radius: 0 15px 15px 0; margin: 15px 0;
+        }
+        .example-box h4 { color: #1565c0; margin-top: 0; }
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin: 15px 0; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 15px 0; }
+        .card { background: #f5f5f5; border-radius: 15px; padding: 20px; border-top: 4px solid #00695c; }
+        .card.blue { border-top-color: #1976d2; }
+        .card.orange { border-top-color: #ff6f00; }
+        .card h4 { margin-top: 0; }
+        .tag { display: inline-block; background: #00695c; color: white; padding: 4px 12px;
+            border-radius: 15px; font-size: 12px; margin-right: 8px; margin-bottom: 8px; }
+        .tag.orange { background: #ff6f00; }
+        .tag.blue { background: #1976d2; }
+        .progress-indicator { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 8px; z-index: 9999; }
+        .progress-dot { width: 12px; height: 12px; border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3); cursor: pointer; transition: all 0.3s; }
+        .progress-dot.active { background: #ff8f00; transform: scale(1.3); }
+        @media (max-width: 900px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            .content-card { padding: 20px; }
+            h1 { font-size: 28px; } h2 { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <div class="nav-title">6-2 素養題與跨領域探究題設計</div>
+        <div class="nav-buttons">
+            <a href="index2.html" class="nav-btn">首頁</a>
+            <a href="Part6-3_形成性評量回饋.html" class="nav-btn">下一章</a>
+            <button class="nav-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="nav-btn">YT</a>
+            <a href="https://www.facebook.com/?locale=zh_TW" target="_blank" class="nav-btn">FB</a>
+            <a href="https://www.facebook.com/groups/2754139931432955?locale=zh_TW" target="_blank" class="nav-btn">3A</a>
+        </div>
+    </nav>
+    <button class="nav-arrow prev-arrow" onclick="prevSlide()">←</button>
+    <button class="nav-arrow next-arrow" onclick="nextSlide()">→</button>
+
+    <div class="slide-container">
+        <!-- Slide 1 -->
+        <div class="slide active">
+            <div class="content-card" style="text-align: center;">
+                <div style="margin-bottom: 25px;">
+                    <span class="tag">Part 6-2</span>
+                    <span class="tag orange">素養導向</span>
+                </div>
+                <h1>素養題與跨領域探究題設計</h1>
+                <p style="font-size: 20px; color: #00695c; margin: 25px 0;">
+                    PISA 風格 × 太空海洋情境 × AI 輔助出題
+                </p>
+                <div style="margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #e0f2f1, #b2dfdb); border-radius: 15px;">
+                    <p style="font-size: 17px; margin: 0;">
+                        學習設計能評量「理解、應用、分析、評鑑」的素養導向題目<br>
+                        並運用 AI 快速生成多元情境題
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: 素養題的特色 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>素養題的核心特色</h2>
+                <div class="grid-3">
+                    <div class="card">
+                        <h4>1. 真實情境</h4>
+                        <p>題目來自生活或時事</p>
+                        <ul>
+                            <li>火星探測任務新聞</li>
+                            <li>海洋塑膠污染報導</li>
+                            <li>氣候變遷數據</li>
+                        </ul>
+                    </div>
+                    <div class="card blue">
+                        <h4>2. 多元文本</h4>
+                        <p>提供圖表、數據、文章</p>
+                        <ul>
+                            <li>統計圖表判讀</li>
+                            <li>科學文章閱讀</li>
+                            <li>多資料整合</li>
+                        </ul>
+                    </div>
+                    <div class="card orange">
+                        <h4>3. 高層次思考</h4>
+                        <p>不只記憶，更要分析</p>
+                        <ul>
+                            <li>比較與對照</li>
+                            <li>推論與預測</li>
+                            <li>評估與判斷</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: AI 生成素養題提示詞 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>AI 生成素養題提示詞</h2>
+                <div class="prompt-box">
+                    <p style="margin: 0 0 10px 0;"><strong>複製這段提示詞：</strong></p>
+                    <pre>你是一位擅長設計素養導向評量的教師，請根據以下條件設計題目：
+
+【主題】火星探測任務
+【年級】國中八年級
+【題型】PISA 風格素養題
+
+【題目結構】
+1. 情境描述（100-150字，包含真實數據或新聞）
+2. 提供資料（表格或圖表描述）
+3. 題目（3題，由易到難）
+   - 第1題：資料擷取（從文本找答案）
+   - 第2題：資料解釋（分析數據意義）
+   - 第3題：反思評鑑（提出自己的看法）
+
+【輸出格式】
+請包含：題目、選項（如果是選擇題）、參考答案、評分標準</pre>
+                </div>
+                <div class="highlight-box">
+                    <h4>提示詞設計重點</h4>
+                    <p style="margin-bottom: 0;">明確指定 PISA 三層次：<strong>擷取→解釋→反思</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 太空主題素養題範例 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>實作範例：太空探測素養題</h2>
+                <div class="example-box">
+                    <h4>情境描述</h4>
+                    <p style="margin-bottom: 0;">2024年，NASA 的「毅力號」火星探測車成功在火星採集岩石樣本。下表是火星與地球的比較資料：</p>
+                </div>
+                <div style="overflow-x: auto; margin: 15px 0;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
+                        <tr style="background: #e0f2f1;">
+                            <th style="padding: 10px; border: 1px solid #ddd;">項目</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">地球</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">火星</th>
+                        </tr>
+                        <tr><td style="padding: 10px; border: 1px solid #ddd;">與太陽距離</td><td style="padding: 10px; border: 1px solid #ddd;">1.5 億公里</td><td style="padding: 10px; border: 1px solid #ddd;">2.3 億公里</td></tr>
+                        <tr><td style="padding: 10px; border: 1px solid #ddd;">表面溫度</td><td style="padding: 10px; border: 1px solid #ddd;">15°C</td><td style="padding: 10px; border: 1px solid #ddd;">-60°C</td></tr>
+                        <tr><td style="padding: 10px; border: 1px solid #ddd;">大氣主成分</td><td style="padding: 10px; border: 1px solid #ddd;">氮氣、氧氣</td><td style="padding: 10px; border: 1px solid #ddd;">二氧化碳</td></tr>
+                    </table>
+                </div>
+                <div class="grid-3">
+                    <div class="card">
+                        <h4 style="color: #4caf50;">第1題（擷取）</h4>
+                        <p>根據表格，火星的平均表面溫度是多少？</p>
+                    </div>
+                    <div class="card blue">
+                        <h4 style="color: #1976d2;">第2題（解釋）</h4>
+                        <p>為什麼火星溫度比地球低？請根據資料說明原因。</p>
+                    </div>
+                    <div class="card orange">
+                        <h4 style="color: #e65100;">第3題（反思）</h4>
+                        <p>如果人類要在火星建立基地，你認為最大的挑戰是什麼？</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 海洋主題素養題 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>實作範例：海洋觀測素養題</h2>
+                <div class="prompt-box">
+                    <p style="margin: 0 0 10px 0;"><strong>用這段提示詞生成海洋主題題目：</strong></p>
+                    <pre>請設計一道關於「海洋塑膠污染」的素養題：
+
+【情境】
+根據 2023 年研究報告，太平洋垃圾帶面積已達 160 萬平方公里，
+相當於 3 個法國大小。研究發現 80% 是塑膠製品。
+
+【提供資料】
+- 塑膠分解時間表（寶特瓶：450年、塑膠袋：20年...）
+- 各國塑膠使用量統計圖
+
+【題目要求】
+1. 資料擷取題（從圖表找數據）
+2. 因果推論題（分析污染原因）
+3. 解決方案題（提出可行建議並說明理由）
+
+請提供完整題目與評分標準。</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 跨領域探究題設計 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>跨領域探究題設計</h2>
+                <p>結合多個學科知識的題目，更能評量學生的統整能力：</p>
+                <div class="grid-2">
+                    <div class="highlight-box">
+                        <h4>自然 × 數學</h4>
+                        <p><strong>題目：</strong>火星探測車每天行駛 100 公尺，電池續航力 90 天。請計算探測車最遠可以探索多大的範圍？（假設來回路徑）</p>
+                        <p><strong>評量重點：</strong>數學計算 + 科學情境理解</p>
+                    </div>
+                    <div class="example-box">
+                        <h4>自然 × 社會</h4>
+                        <p><strong>題目：</strong>太空探索需要龐大經費，你認為政府應該優先投資太空探索還是解決地球上的貧窮問題？請提出你的看法並說明理由。</p>
+                        <p><strong>評量重點：</strong>科學知識 + 公民素養 + 論證能力</p>
+                    </div>
+                </div>
+                <div class="prompt-box">
+                    <pre>請設計一道跨領域探究題，結合「自然科學」與「社會議題」：
+
+主題：深海採礦
+- 自然面向：深海生態、礦物資源
+- 社會面向：經濟發展 vs 環境保護
+
+請設計一道需要學生整合兩個領域知識才能回答的問題。</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: 實作練習 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>實作練習</h2>
+                <div class="example-box">
+                    <h4>你的任務</h4>
+                    <p>選擇一個主題，使用 AI 生成一套完整的素養題：</p>
+                    <ol>
+                        <li>選擇主題：太空探測 或 海洋觀測</li>
+                        <li>設計情境（使用真實數據）</li>
+                        <li>生成三層次題目（擷取→解釋→反思）</li>
+                        <li>撰寫評分標準</li>
+                    </ol>
+                </div>
+                <div class="grid-2">
+                    <div class="highlight-box">
+                        <h4>自我檢核</h4>
+                        <ul style="margin-bottom: 0;">
+                            <li>□ 情境是否來自真實世界？</li>
+                            <li>□ 是否有提供資料（圖表/數據）？</li>
+                            <li>□ 三題難度是否遞增？</li>
+                            <li>□ 評分標準是否明確？</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h4>下一單元預告</h4>
+                        <p style="margin-bottom: 0;"><strong>6-3 形成性評量與 AI 回饋設計</strong><br>如何設計即時回饋，幫助學生改進</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="progress-indicator"></div>
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        function createProgressDots() {
+            const container = document.querySelector('.progress-indicator');
+            for (let i = 0; i < totalSlides; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'progress-dot' + (i === 0 ? ' active' : '');
+                dot.onclick = () => goToSlide(i);
+                container.appendChild(dot);
+            }
+        }
+        function updateProgress() {
+            document.querySelectorAll('.progress-dot').forEach((dot, i) => {
+                dot.classList.toggle('active', i === currentSlide);
+            });
+        }
+        function showSlide(index) {
+            slides.forEach((slide, i) => { slide.classList.toggle('active', i === index); });
+            updateProgress();
+            document.querySelector('.prev-arrow').disabled = index === 0;
+            document.querySelector('.next-arrow').disabled = index === totalSlides - 1;
+        }
+        function nextSlide() { if (currentSlide < totalSlides - 1) { currentSlide++; showSlide(currentSlide); } }
+        function prevSlide() { if (currentSlide > 0) { currentSlide--; showSlide(currentSlide); } }
+        function goToSlide(index) { currentSlide = index; showSlide(currentSlide); }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+        createProgressDots();
+        showSlide(0);
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+    </script>
+</body>
+</html>

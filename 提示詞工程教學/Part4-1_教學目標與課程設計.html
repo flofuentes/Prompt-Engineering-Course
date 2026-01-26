@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4-1 教學目標與課程設計 - 提示詞工程實戰教學</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0d47a1 0%, #1565c0 50%, #1976d2 100%);
+            min-height: 100vh; overflow: hidden; color: #333;
+        }
+        .nav-bar {
+            position: fixed; top: 0; left: 0; right: 0; height: 60px;
+            background: rgba(13, 71, 161, 0.95); backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 30px; z-index: 10000;
+        }
+        .nav-title {
+            font-size: 20px; font-weight: 700;
+            background: linear-gradient(90deg, #90caf9, #64b5f6);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .nav-buttons { display: flex; gap: 12px; }
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white; padding: 8px 18px; border-radius: 20px; cursor: pointer;
+            font-size: 14px; font-weight: 600; text-decoration: none; transition: all 0.3s ease;
+        }
+        .nav-btn:hover { background: rgba(144, 202, 249, 0.3); border-color: #90caf9; }
+        .nav-arrow {
+            position: fixed; top: 50%; transform: translateY(-50%);
+            background: rgba(13, 71, 161, 0.8); color: white; width: 60px; height: 60px;
+            border-radius: 50%; border: 2px solid rgba(144, 202, 249, 0.5);
+            font-size: 24px; cursor: pointer; z-index: 9000; transition: all 0.3s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .nav-arrow:hover { background: rgba(21, 101, 192, 0.9); transform: translateY(-50%) scale(1.1); }
+        .prev-arrow { left: 30px; } .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+        .slide-container { width: 100%; height: 100vh; padding-top: 60px; position: relative; z-index: 1; }
+        .slide {
+            position: absolute; top: 60px; left: 0; width: 100%; height: calc(100vh - 60px);
+            display: none; align-items: center; justify-content: center; padding: 40px;
+            opacity: 0; transition: opacity 0.4s ease; z-index: 10;
+        }
+        .slide.active { display: flex; opacity: 1; z-index: 20; }
+        .content-card {
+            background: rgba(255, 255, 255, 0.97); border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            padding: 40px 50px; max-width: 1350px; width: 95%; max-height: 85vh; overflow-y: auto;
+        }
+        h1 { font-size: 42px; margin-bottom: 20px; text-align: center;
+            background: linear-gradient(135deg, #0d47a1, #42a5f5);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { color: #0d47a1; font-size: 30px; margin-bottom: 25px;
+            border-bottom: 4px solid; border-image: linear-gradient(90deg, #0d47a1, #42a5f5) 1;
+            padding-bottom: 12px; }
+        h3 { color: #1565c0; font-size: 22px; margin: 20px 0 12px 0; }
+        h4 { color: #1976d2; font-size: 18px; margin: 15px 0 8px 0; }
+        p, li { font-size: 17px; line-height: 1.8; color: #444; margin-bottom: 10px; }
+        ul, ol { margin-left: 25px; margin-bottom: 15px; }
+        pre {
+            background: linear-gradient(135deg, #0d47a1, #1565c0); color: #90caf9;
+            padding: 20px 25px; border-radius: 14px; overflow-x: auto; margin: 20px 0;
+            font-size: 14px; line-height: 1.6; font-family: 'Consolas', monospace;
+            border: 1px solid rgba(144, 202, 249, 0.3); white-space: pre-wrap;
+        }
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(13, 71, 161, 0.08), rgba(66, 165, 245, 0.08));
+            border-left: 5px solid #0d47a1; padding: 20px 25px;
+            border-radius: 0 15px 15px 0; margin: 20px 0;
+        }
+        .highlight-box h4 { color: #0d47a1; margin-top: 0; }
+        .example-box {
+            background: #f5f5f5; padding: 20px; border-radius: 12px;
+            margin: 15px 0; border: 1px solid #e0e0e0;
+        }
+        .example-box h4 { color: #0d47a1; margin-top: 0; margin-bottom: 10px; }
+        .copy-btn {
+            background: linear-gradient(135deg, #0d47a1, #1976d2); color: white;
+            border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer;
+            font-size: 13px; margin-top: 10px; transition: all 0.3s;
+        }
+        .copy-btn:hover { transform: scale(1.05); }
+        .process-flow {
+            display: flex; align-items: center; justify-content: center;
+            gap: 10px; margin: 20px 0; flex-wrap: wrap;
+        }
+        .process-step {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            padding: 15px 20px; border-radius: 10px; text-align: center; min-width: 120px;
+        }
+        .process-step h5 { color: #0d47a1; margin-bottom: 5px; }
+        .process-step p { font-size: 12px; margin: 0; }
+        .arrow { font-size: 24px; color: #0d47a1; }
+        .template-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 20px 0; }
+        .template-card {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb); padding: 25px;
+            border-radius: 15px; border: 2px solid transparent; transition: all 0.3s;
+        }
+        .template-card:hover { border-color: #0d47a1; transform: translateY(-3px); }
+        .template-card h4 { color: #0d47a1; margin-top: 0; margin-bottom: 10px; }
+        .practice-box {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border: 2px dashed #ff9800; padding: 25px; border-radius: 15px; margin: 20px 0;
+        }
+        .practice-box h4 { color: #e65100; margin-top: 0; }
+        .input-wrapper {
+            position: relative;
+            margin-top: 10px;
+        }
+        .practice-input {
+            width: 100%;
+            min-height: 80px;
+            padding: 15px;
+            padding-right: 70px;
+            border: 2px dashed #ff9800;
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            resize: vertical;
+            background: #fff;
+        }
+        .practice-input:focus {
+            outline: none;
+            border-color: #f57c00;
+            box-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
+        }
+        .copy-input-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+        .copy-input-btn:hover {
+            background: linear-gradient(135deg, #f57c00, #ef6c00);
+            transform: scale(1.05);
+        }
+        .copy-input-btn.copied {
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+        }
+        .slide-number {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: rgba(13, 71, 161, 0.8); color: white; padding: 10px 25px;
+            border-radius: 25px; font-size: 14px; font-weight: 600; z-index: 9000;
+        }
+        .footer-info {
+            text-align: center; margin-top: 30px; padding-top: 20px;
+            border-top: 2px solid #e0e0e0; color: #666; font-size: 14px;
+        }
+        @media (max-width: 768px) {
+            .content-card { padding: 25px; } h1 { font-size: 28px; } h2 { font-size: 22px; }
+            .template-grid { grid-template-columns: 1fr; }
+            .process-flow { flex-direction: column; } .arrow { transform: rotate(90deg); }
+            .nav-arrow { width: 45px; height: 45px; font-size: 18px; }
+            .prev-arrow { left: 10px; } .next-arrow { right: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <span class="nav-title">4-1 教學目標與課程設計</span>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-btn">首頁</a>
+            <a href="Part3-3_簡報與社群圖像.html" class="nav-btn">Part 3</a>
+            <a href="Part4-2_太空探測主題實作.html" class="nav-btn">下一章</a>
+            <button class="nav-btn fullscreen-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="nav-btn">YT</a>
+        </div>
+    </nav>
+    <button class="nav-arrow prev-arrow" onclick="prevSlide()">◀</button>
+    <button class="nav-arrow next-arrow" onclick="nextSlide()">▶</button>
+
+    <div class="slide-container">
+        <!-- Slide 1 -->
+        <div class="slide active">
+            <div class="content-card" style="text-align: center;">
+                <h1>教學目標與課程設計</h1>
+                <p style="font-size: 22px; color: #666; margin-bottom: 30px;">AI-Assisted Lesson Planning</p>
+                <div class="process-flow">
+                    <div class="process-step"><h5>分析</h5><p>學習需求</p></div>
+                    <span class="arrow">→</span>
+                    <div class="process-step"><h5>設定</h5><p>教學目標</p></div>
+                    <span class="arrow">→</span>
+                    <div class="process-step"><h5>設計</h5><p>課程內容</p></div>
+                    <span class="arrow">→</span>
+                    <div class="process-step"><h5>準備</h5><p>教學資源</p></div>
+                    <span class="arrow">→</span>
+                    <div class="process-step"><h5>規劃</h5><p>評量方式</p></div>
+                </div>
+                <p style="margin-top: 20px;">運用 AI 完成完整的備課流程</p>
+                <div class="footer-info">© 2026 阿亮老師 | 提示詞工程實戰教學</div>
+            </div>
+        </div>
+
+        <!-- Slide 2: AI 輔助備課流程 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>AI 輔助備課的完整流程</h2>
+                <div class="highlight-box">
+                    <h4>為什麼用 AI 備課？</h4>
+                    <p>AI 可以快速生成教學點子、整理知識架構、產出多元素材，讓教師有更多時間專注於教學設計的創意和學生互動。</p>
+                </div>
+                <h3>五階段備課流程</h3>
+                <div class="template-grid">
+                    <div class="template-card">
+                        <h4>1. 需求分析</h4>
+                        <p>了解學生背景、先備知識、學習需求，確定教學情境。</p>
+                    </div>
+                    <div class="template-card">
+                        <h4>2. 目標設定</h4>
+                        <p>運用 AI 協助撰寫 SMART 教學目標，對應課綱指標。</p>
+                    </div>
+                    <div class="template-card">
+                        <h4>3. 內容設計</h4>
+                        <p>用 AI 生成教學大綱、活動設計、知識整理。</p>
+                    </div>
+                    <div class="template-card">
+                        <h4>4. 資源準備</h4>
+                        <p>運用 AI 產出講義、簡報、學習單、圖像等素材。</p>
+                    </div>
+                    <div class="template-card">
+                        <h4>5. 評量規劃</h4>
+                        <p>設計評量題目、評分標準、回饋機制。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 目標拆解 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>教學目標拆解提示詞</h2>
+                <div class="example-box">
+                    <h4>從課綱到教學目標</h4>
+                    <pre>你是一位資深的課程設計專家。
+
+請協助我將以下課綱能力指標拆解成具體的教學目標：
+
+課綱指標：[貼上課綱內容]
+年級：[年級]
+單元主題：[主題]
+教學節數：[節數]
+
+請提供：
+1. 核心概念分析
+   - 這個指標要學生學會什麼？
+   - 可拆解成哪些子概念？
+
+2. 教學目標（每節課 2-3 條）
+   - 認知目標（使用 Bloom 動詞）
+   - 情意目標
+   - 技能目標
+
+3. 學習進程建議
+   - 各節課的重點分配
+   - 概念的先後順序
+
+4. 先備知識檢核
+   - 學生需要先會什麼？
+   - 可能的迷思概念</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 情境式課程設計 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>情境式課程設計</h2>
+                <div class="highlight-box">
+                    <h4>什麼是情境式學習？</h4>
+                    <p>將學習內容放在真實或模擬的情境中，讓學生在解決問題的過程中學習知識和技能。</p>
+                </div>
+                <div class="example-box">
+                    <h4>情境式課程設計模板</h4>
+                    <pre>請設計一個情境式學習課程：
+
+主題：[教學主題，如「太空探測」]
+年級：[年級]
+節數：[節數]
+
+設計要求：
+1. 創造一個吸引人的學習情境/故事背景
+   - 設定學生的角色（如：太空科學家、探險家）
+   - 設定任務目標（如：規劃火星探測任務）
+
+2. 將學習內容融入情境
+   - 核心知識點如何在情境中自然出現
+   - 每個活動如何推進故事
+
+3. 設計挑戰任務
+   - 學生需要運用知識解決的問題
+   - 漸進式的難度設計
+
+4. 設計反思環節
+   - 如何讓學生從情境回到學習內容
+   - 知識的遷移和應用
+
+請提供完整的課程流程，包含每節課的情境發展。</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 太空主題範例 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>太空探測主題：情境範例</h2>
+                <div class="highlight-box">
+                    <h4>情境背景</h4>
+                    <p>「各位太空總署的新進科學家，恭喜你們通過選拔！你們的第一個任務是：規劃人類首次登陸火星的探測計畫...」</p>
+                </div>
+                <h3>情境任務設計</h3>
+                <div class="template-grid">
+                    <div class="template-card">
+                        <h4>任務一：認識太陽系</h4>
+                        <p>要去火星，得先認識太陽系！分析各行星特徵，為什麼選擇火星？</p>
+                    </div>
+                    <div class="template-card">
+                        <h4>任務二：火星環境分析</h4>
+                        <p>研究火星的大氣、溫度、地形，太空人需要什麼裝備？</p>
+                    </div>
+                    <div class="template-card">
+                        <h4>任務三：設計探測計畫</h4>
+                        <p>規劃任務時程、設計探測路線、準備科學實驗。</p>
+                    </div>
+                    <div class="template-card">
+                        <h4>任務四：發表報告</h4>
+                        <p>向太空總署報告你的探測計畫，說服他們採用。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 海洋主題範例 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>海洋觀測主題：情境範例</h2>
+                <div class="highlight-box">
+                    <h4>情境背景</h4>
+                    <p>「各位海洋研究所的新成員，我們收到求救信號：珊瑚礁生態系正在崩壞！你們的任務是找出原因並提出解決方案...」</p>
+                </div>
+                <h3>情境任務設計</h3>
+                <div class="template-grid">
+                    <div class="template-card">
+                        <h4>任務一：認識海洋生態系</h4>
+                        <p>什麼是珊瑚礁？為什麼它被稱為「海洋的熱帶雨林」？</p>
+                    </div>
+                    <div class="template-card">
+                        <h4>任務二：調查問題原因</h4>
+                        <p>分析數據、閱讀報告，找出珊瑚白化的可能原因。</p>
+                    </div>
+                    <div class="template-card">
+                        <h4>任務三：設計觀測方案</h4>
+                        <p>規劃海洋觀測站的位置、設備、監測指標。</p>
+                    </div>
+                    <div class="template-card">
+                        <h4>任務四：提出保育行動</h4>
+                        <p>設計保育方案，製作宣導材料，呼籲大眾關注。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: 課程大綱生成 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>課程大綱生成提示詞</h2>
+                <div class="example-box">
+                    <h4>完整課程大綱模板</h4>
+                    <pre>請為以下主題設計完整的課程大綱：
+
+【基本資訊】
+主題：[主題名稱]
+年級：[年級]
+總節數：[節數]
+每節時間：[分鐘]
+
+【設計原則】
+- 採用情境式學習設計
+- 融入探究式學習元素
+- 包含差異化教學策略
+- 結合科技工具應用
+
+請提供：
+1. 課程總覽（一頁圖表式呈現）
+2. 各節課詳細規劃
+   - 教學目標
+   - 教學活動（時間分配）
+   - 教師引導語範例
+   - 學生任務說明
+   - 所需教具資源
+3. 評量計畫
+   - 形成性評量方式
+   - 總結性評量設計
+4. 跨領域連結建議
+5. 延伸學習資源</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: 差異化策略 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>差異化教學策略</h2>
+                <div class="example-box">
+                    <h4>差異化教學策略生成</h4>
+                    <pre>請為以下教學內容設計差異化教學策略：
+
+教學主題：[主題]
+班級狀況：
+- 高成就學生約 [X] 位
+- 一般程度學生約 [X] 位
+- 需要額外支持學生約 [X] 位
+
+請針對以下面向設計差異化策略：
+
+1. 內容差異化
+   - 核心內容（所有人必學）
+   - 進階內容（高成就延伸）
+   - 簡化版本（需支持學生）
+
+2. 過程差異化
+   - 不同學習路徑選項
+   - 分組策略建議
+   - 學習支架設計
+
+3. 產出差異化
+   - 多元展現學習成果的方式
+   - 不同難度的任務選項
+   - 彈性評量標準
+
+4. 環境差異化
+   - 學習空間安排
+   - 資源分配建議</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: 教學資源清單 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>教學資源清單生成</h2>
+                <div class="example-box">
+                    <h4>資源清單模板</h4>
+                    <pre>請為以下課程列出所需的教學資源清單：
+
+課程主題：[主題]
+節數：[節數]
+教學方式：[講述/討論/實作/探究]
+
+請提供完整的資源清單，包含：
+
+1. 教具材料
+   - 實體教具
+   - 消耗性材料
+   - 預估數量和費用
+
+2. 數位資源
+   - 建議影片（附搜尋關鍵字）
+   - 建議網站/互動資源
+   - 可用的 APP 或軟體
+
+3. 文件資料
+   - 需要準備的講義
+   - 學習單設計方向
+   - 參考閱讀資料
+
+4. 環境設備
+   - 教室配置建議
+   - 需要的器材設備
+
+5. 備案資源
+   - 如果某資源無法取得的替代方案</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: 實作練習 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>實作練習</h2>
+                <div class="practice-box">
+                    <h4>練習 1：設計情境背景</h4>
+                    <p>為「太空探測」或「海洋觀測」主題，設計一個吸引學生的情境背景和角色設定。</p>
+                    <div class="input-wrapper">
+                        <textarea class="practice-input" id="practice1" placeholder="在這裡寫下你的提示詞..."></textarea>
+                        <button class="copy-input-btn" onclick="copyInput('practice1')">複製</button>
+                    </div>
+                </div>
+                <div class="practice-box">
+                    <h4>練習 2：拆解教學目標</h4>
+                    <p>選擇一個課綱指標，使用目標拆解模板，生成具體的教學目標。</p>
+                    <div class="input-wrapper">
+                        <textarea class="practice-input" id="practice2" placeholder="在這裡寫下你的提示詞..."></textarea>
+                        <button class="copy-input-btn" onclick="copyInput('practice2')">複製</button>
+                    </div>
+                </div>
+                <div class="practice-box">
+                    <h4>練習 3：課程大綱設計</h4>
+                    <p>為 4 節課的「太空探測」或「海洋觀測」單元設計完整大綱。</p>
+                    <div class="input-wrapper">
+                        <textarea class="practice-input" id="practice3" placeholder="在這裡寫下你的提示詞..."></textarea>
+                        <button class="copy-input-btn" onclick="copyInput('practice3')">複製</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: 總結 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>本節重點回顧</h2>
+                <div class="template-grid">
+                    <div class="template-card">
+                        <h4>五階段備課</h4>
+                        <p>分析→目標→設計→資源→評量</p>
+                    </div>
+                    <div class="template-card">
+                        <h4>目標拆解</h4>
+                        <p>從課綱到具體可測量的教學目標</p>
+                    </div>
+                    <div class="template-card">
+                        <h4>情境式設計</h4>
+                        <p>創造角色和任務，讓學習更有意義</p>
+                    </div>
+                    <div class="template-card">
+                        <h4>差異化策略</h4>
+                        <p>內容、過程、產出、環境的差異化</p>
+                    </div>
+                </div>
+                <div class="highlight-box" style="margin-top: 30px;">
+                    <h4>下一節預告</h4>
+                    <p>在 4-2 節中，我們將實際操作<strong>太空探測主題</strong>的完整備課流程！</p>
+                </div>
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="Part4-2_太空探測主題實作.html" class="nav-btn" style="display: inline-block; background: linear-gradient(135deg, #0d47a1, #1976d2); border: none; padding: 15px 40px; font-size: 18px;">前往下一節 →</a>
+                </div>
+                <div class="footer-info">© 2026 阿亮老師 | 提示詞工程實戰教學</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide-number"><span id="currentSlide">1</span> / <span id="totalSlides">11</span></div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        document.getElementById('totalSlides').textContent = totalSlides;
+        function showSlide(index) {
+            slides.forEach((slide, i) => { slide.classList.remove('active'); if (i === index) slide.classList.add('active'); });
+            document.getElementById('currentSlide').textContent = index + 1;
+            document.querySelector('.prev-arrow').disabled = index === 0;
+            document.querySelector('.next-arrow').disabled = index === totalSlides - 1;
+        }
+        function nextSlide() { if (currentSlide < totalSlides - 1) { currentSlide++; showSlide(currentSlide); } }
+        function prevSlide() { if (currentSlide > 0) { currentSlide--; showSlide(currentSlide); } }
+        function copyTemplate(btn) {
+            const pre = btn.previousElementSibling;
+            navigator.clipboard.writeText(pre.textContent).then(() => { btn.textContent = '已複製！'; setTimeout(() => btn.textContent = '複製模板', 2000); });
+        }
+        document.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' || e.key === ' ') nextSlide(); else if (e.key === 'ArrowLeft') prevSlide(); });
+        showSlide(0);
+
+        // 全螢幕切換
+        function toggleFullscreen() {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                btn.textContent = '離開全螢幕';
+            } else {
+                document.exitFullscreen();
+                btn.textContent = '全螢幕';
+            }
+        }
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) btn.textContent = '全螢幕';
+        });
+
+        // 複製練習輸入框內容
+        function copyInput(id) {
+            const textarea = document.getElementById(id);
+            const btn = textarea.parentElement.querySelector('.copy-input-btn');
+            if (textarea.value.trim() === '') {
+                alert('請先輸入內容再複製！');
+                return;
+            }
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                btn.textContent = '已複製！';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = '複製';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2-3 學習單生成提示詞 - 提示詞工程實戰教學</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #004d40 0%, #00695c 50%, #00897b 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            color: #333;
+        }
+
+        .nav-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(0, 77, 64, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 10000;
+        }
+
+        .nav-title {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #a5d6a7, #81c784);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-buttons { display: flex; gap: 12px; }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(165, 214, 167, 0.3);
+            border-color: #a5d6a7;
+        }
+
+        .nav-arrow {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 77, 64, 0.8);
+            color: white;
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: 2px solid rgba(165, 214, 167, 0.5);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 9000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-arrow:hover {
+            background: rgba(0, 105, 92, 0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+        .prev-arrow { left: 30px; }
+        .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .slide-container {
+            width: 100%;
+            height: 100vh;
+            padding-top: 60px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .slide {
+            position: absolute;
+            top: 60px; left: 0;
+            width: 100%;
+            height: calc(100vh - 60px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 10;
+        }
+
+        .slide.active {
+            display: flex;
+            opacity: 1;
+            z-index: 20;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.97);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            padding: 40px 50px;
+            max-width: 1350px;
+            width: 95%;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        h1 {
+            font-size: 42px;
+            margin-bottom: 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #00695c, #26a69a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        h2 {
+            color: #00695c;
+            font-size: 30px;
+            margin-bottom: 25px;
+            border-bottom: 4px solid;
+            border-image: linear-gradient(90deg, #00695c, #26a69a) 1;
+            padding-bottom: 12px;
+        }
+        h3 { color: #00897b; font-size: 22px; margin: 20px 0 12px 0; }
+        h4 { color: #26a69a; font-size: 18px; margin: 15px 0 8px 0; }
+
+        p, li {
+            font-size: 17px;
+            line-height: 1.8;
+            color: #444;
+            margin-bottom: 10px;
+        }
+
+        ul, ol { margin-left: 25px; margin-bottom: 15px; }
+
+        pre {
+            background: linear-gradient(135deg, #004d40, #00695c);
+            color: #a5d6a7;
+            padding: 20px 25px;
+            border-radius: 14px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-size: 14px;
+            line-height: 1.6;
+            font-family: 'Consolas', monospace;
+            border: 1px solid rgba(165, 214, 167, 0.3);
+            white-space: pre-wrap;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(0, 105, 92, 0.08), rgba(38, 166, 154, 0.08));
+            border-left: 5px solid #00695c;
+            padding: 20px 25px;
+            border-radius: 0 15px 15px 0;
+            margin: 20px 0;
+        }
+
+        .highlight-box h4 {
+            color: #00695c;
+            margin-top: 0;
+        }
+
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .template-card {
+            background: linear-gradient(135deg, #e8f5e9, #e0f2f1);
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .template-card:hover {
+            border-color: #00695c;
+            transform: translateY(-3px);
+        }
+
+        .template-card h4 {
+            color: #00695c;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .example-box {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border: 1px solid #e0e0e0;
+        }
+
+        .example-box h4 {
+            color: #00695c;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .copy-btn {
+            background: linear-gradient(135deg, #00695c, #00897b);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .copy-btn:hover { transform: scale(1.05); }
+
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .level-card {
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .level-card.high {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+            border-top: 4px solid #4caf50;
+        }
+        .level-card.high h5 { color: #2e7d32; }
+
+        .level-card.mid {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-top: 4px solid #2196f3;
+        }
+        .level-card.mid h5 { color: #1565c0; }
+
+        .level-card.low {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border-top: 4px solid #ff9800;
+        }
+        .level-card.low h5 { color: #e65100; }
+
+        .level-card h5 {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .level-card p {
+            font-size: 13px;
+            margin: 0;
+        }
+
+        .practice-box {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border: 2px dashed #ff9800;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .practice-box h4 {
+            color: #e65100;
+            margin-top: 0;
+        }
+
+        .input-wrapper {
+            position: relative;
+            margin-top: 10px;
+        }
+
+        .practice-input {
+            width: 100%;
+            min-height: 80px;
+            padding: 15px;
+            padding-right: 70px;
+            border: 2px dashed #ff9800;
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            resize: vertical;
+            background: #fff;
+        }
+
+        .practice-input:focus {
+            outline: none;
+            border-color: #f57c00;
+            box-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
+        }
+
+        .copy-input-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .copy-input-btn:hover {
+            background: linear-gradient(135deg, #f57c00, #ef6c00);
+            transform: scale(1.05);
+        }
+
+        .copy-input-btn.copied {
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+        }
+
+        .question-type {
+            display: inline-block;
+            background: linear-gradient(135deg, #00695c, #00897b);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 13px;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        .slide-number {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 77, 64, 0.8);
+            color: white;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 9000;
+        }
+
+        .footer-info {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .content-card { padding: 25px; }
+            h1 { font-size: 28px; }
+            h2 { font-size: 22px; }
+            .template-grid, .level-grid { grid-template-columns: 1fr; }
+            .nav-arrow { width: 45px; height: 45px; font-size: 18px; }
+            .prev-arrow { left: 10px; }
+            .next-arrow { right: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <span class="nav-title">2-3 學習單生成提示詞</span>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-btn">首頁</a>
+            <a href="Part2-2_教案設計提示詞.html" class="nav-btn">上一章</a>
+            <a href="Part3-1_圖像提示詞基礎.html" class="nav-btn">Part 3</a>
+            <button class="nav-btn fullscreen-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="nav-btn">YT</a>
+        </div>
+    </nav>
+
+    <button class="nav-arrow prev-arrow" onclick="prevSlide()">◀</button>
+    <button class="nav-arrow next-arrow" onclick="nextSlide()">▶</button>
+
+    <div class="slide-container">
+        <!-- Slide 1: 標題頁 -->
+        <div class="slide active">
+            <div class="content-card" style="text-align: center;">
+                <h1>學習單生成提示詞</h1>
+                <p style="font-size: 22px; color: #666; margin-bottom: 30px;">
+                    Worksheet Generation with AI
+                </p>
+                <div class="template-grid">
+                    <div class="template-card">
+                        <h4>差異化學習單</h4>
+                        <p>三層次難度設計</p>
+                    </div>
+                    <div class="template-card">
+                        <h4>評量題目生成</h4>
+                        <p>選擇、填充、問答</p>
+                    </div>
+                    <div class="template-card">
+                        <h4>回饋語設計</h4>
+                        <p>個人化學習回饋</p>
+                    </div>
+                </div>
+                <p style="margin-top: 20px;">快速產出適合不同程度學生的學習材料</p>
+                <div class="footer-info">
+                    © 2026 阿亮老師 | 提示詞工程實戰教學
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: 學習單類型 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>學習單的常見類型</h2>
+
+                <div class="highlight-box">
+                    <h4>依教學目的分類</h4>
+                    <p>不同類型的學習單適合不同的教學情境，在提示詞中明確指定類型，AI 就能產出更適合的內容。</p>
+                </div>
+
+                <div class="template-grid">
+                    <div class="template-card">
+                        <h4>預習學習單</h4>
+                        <p>上課前使用，引導學生自學</p>
+                        <ul style="font-size: 14px; margin-top: 10px;">
+                            <li>閱讀指引</li>
+                            <li>預習問題</li>
+                            <li>自我檢核</li>
+                        </ul>
+                    </div>
+                    <div class="template-card">
+                        <h4>課堂學習單</h4>
+                        <p>課堂中使用，配合教學進行</p>
+                        <ul style="font-size: 14px; margin-top: 10px;">
+                            <li>筆記引導</li>
+                            <li>實作記錄</li>
+                            <li>討論題目</li>
+                        </ul>
+                    </div>
+                    <div class="template-card">
+                        <h4>複習學習單</h4>
+                        <p>課後使用，鞏固學習成果</p>
+                        <ul style="font-size: 14px; margin-top: 10px;">
+                            <li>重點整理</li>
+                            <li>練習題</li>
+                            <li>延伸思考</li>
+                        </ul>
+                    </div>
+                    <div class="template-card">
+                        <h4>評量學習單</h4>
+                        <p>評估學習成效</p>
+                        <ul style="font-size: 14px; margin-top: 10px;">
+                            <li>測驗題目</li>
+                            <li>實作評量</li>
+                            <li>自評互評</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 基本學習單模板 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>基本學習單生成模板</h2>
+
+                <div class="example-box">
+                    <h4>通用學習單模板</h4>
+                    <pre>【Role】你是一位專業的教材編輯，
+擅長設計清晰易懂、版面美觀的學習單。
+
+【Task】請設計一份學習單：
+- 科目：[科目]
+- 年級：[年級]
+- 單元：[單元名稱]
+- 類型：[預習/課堂/複習/評量]
+- 預計完成時間：[時間]
+
+【Format】學習單格式：
+1. 標題與基本資訊（班級、姓名、日期）
+2. 學習目標（1-2 句話說明這份學習單要達成什麼）
+3. 內容區塊（依類型設計）
+4. 自我檢核區（學生自評完成度）
+
+【Constraint】
+- 版面清楚，有適當空白供學生書寫
+- 題目指示要明確
+- 適合 [年級] 學生的閱讀能力
+- 請用純文字呈現，標示哪裡需要畫線或框</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 差異化學習單 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>差異化學習單設計</h2>
+
+                <p>同一單元設計不同難度的學習單，照顧各程度學生。</p>
+
+                <div class="level-grid">
+                    <div class="level-card high">
+                        <h5>挑戰版</h5>
+                        <p>適合高成就學生</p>
+                        <p style="margin-top: 8px; font-size: 12px;">
+                            開放式問題<br>
+                            延伸探究<br>
+                            跨領域連結
+                        </p>
+                    </div>
+                    <div class="level-card mid">
+                        <h5>標準版</h5>
+                        <p>適合一般程度</p>
+                        <p style="margin-top: 8px; font-size: 12px;">
+                            基本概念<br>
+                            標準練習<br>
+                            引導思考
+                        </p>
+                    </div>
+                    <div class="level-card low">
+                        <h5>基礎版</h5>
+                        <p>適合需加強學生</p>
+                        <p style="margin-top: 8px; font-size: 12px;">
+                            填空引導<br>
+                            圖示輔助<br>
+                            步驟分解
+                        </p>
+                    </div>
+                </div>
+
+                <div class="example-box">
+                    <h4>差異化學習單模板</h4>
+                    <pre>請為「[單元名稱]」設計三種難度的學習單：
+
+共同資訊：
+- 年級：[年級]
+- 核心概念：[這個單元的重點]
+- 基本學習目標：[所有學生都要達成的目標]
+
+請分別設計：
+
+【基礎版】（需加強學生適用）
+- 題目有明確引導和提示
+- 使用填空、配對等較容易的題型
+- 提供範例或部分答案
+- 題目數量較少，但基礎概念都有涵蓋
+
+【標準版】（一般程度適用）
+- 標準難度的練習題
+- 混合題型（選擇、填充、簡答）
+- 需要學生自己組織答案
+- 涵蓋完整的學習內容
+
+【挑戰版】（高成就學生適用）
+- 開放性、探究性問題
+- 需要分析、比較、創造
+- 延伸到課本以外的應用
+- 鼓勵獨立思考和創意
+
+三個版本要能評量相同的核心概念，但深度和廣度不同。</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 評量題目生成 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>評量題目生成提示詞</h2>
+
+                <h3>常見題型</h3>
+                <div style="margin: 15px 0;">
+                    <span class="question-type">選擇題</span>
+                    <span class="question-type">是非題</span>
+                    <span class="question-type">填充題</span>
+                    <span class="question-type">配合題</span>
+                    <span class="question-type">簡答題</span>
+                    <span class="question-type">申論題</span>
+                    <span class="question-type">實作題</span>
+                </div>
+
+                <div class="example-box">
+                    <h4>選擇題生成模板</h4>
+                    <pre>請為以下內容設計 [數量] 題選擇題：
+
+科目：[科目]
+單元：[單元]
+年級：[年級]
+測驗內容：[要測驗的知識點]
+
+選擇題要求：
+1. 每題 4 個選項（A、B、C、D）
+2. 只有一個正確答案
+3. 錯誤選項要有誘答力（常見迷思概念）
+4. 題幹清楚，避免否定句或雙重否定
+5. 難度分配：簡單 40%、中等 40%、困難 20%
+
+請提供：
+- 題目與選項
+- 正確答案
+- 每個選項的解析（為什麼對/為什麼錯）</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 更多題型模板 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>其他題型生成模板</h2>
+
+                <div class="template-grid">
+                    <div class="template-card">
+                        <h4>填充題</h4>
+                        <pre style="background: #fff; color: #333; font-size: 12px; padding: 10px;">
+請設計 [數量] 題填充題：
+單元：[單元]
+要求：
+- 每題只有 1-2 個空格
+- 空格處是關鍵概念
+- 題目前後有足夠線索
+- 附上答案和評分標準
+                        </pre>
+                    </div>
+                    <div class="template-card">
+                        <h4>配合題</h4>
+                        <pre style="background: #fff; color: #333; font-size: 12px; padding: 10px;">
+請設計一組配合題：
+左欄：[項目類型，如：名詞]
+右欄：[項目類型，如：定義]
+要求：
+- 左右欄數量相同
+- 每個配對都是一對一
+- 選項具有區辨度
+- 附上答案
+                        </pre>
+                    </div>
+                    <div class="template-card">
+                        <h4>簡答題</h4>
+                        <pre style="background: #fff; color: #333; font-size: 12px; padding: 10px;">
+請設計 [數量] 題簡答題：
+單元：[單元]
+要求：
+- 問題明確，範圍清楚
+- 預期答案在 50-100 字
+- 附上參考答案
+- 附上評分標準（Rubric）
+                        </pre>
+                    </div>
+                </div>
+
+                <div class="example-box">
+                    <h4>申論題 + 評分規準（Rubric）</h4>
+                    <pre>請設計一題申論題，並附上評分規準：
+
+主題：[主題]
+對象：[年級]
+預期作答時間：[時間]
+
+題目要求：
+- 題目有明確的作答方向
+- 需要學生整合知識、表達觀點
+- 沒有標準唯一答案，但有評分標準
+
+評分規準（Rubric）請包含：
+- 4 個等級（優秀/良好/基本/待加強）
+- 每個等級的具體描述
+- 各面向的配分（如：內容、組織、表達）</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: 回饋語生成 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>學習回饋語生成</h2>
+
+                <div class="highlight-box">
+                    <h4>有效回饋的特徵</h4>
+                    <p>好的回饋要：具體指出優點和改進空間、提供具體建議、鼓勵持續學習。AI 可以幫你快速產生個人化的回饋語。</p>
+                </div>
+
+                <div class="example-box">
+                    <h4>學習回饋語生成模板</h4>
+                    <pre>請根據以下學生表現，生成個人化的學習回饋：
+
+學生表現：
+- 作業完成度：[百分比]
+- 正確率：[百分比]
+- 表現亮點：[描述]
+- 需要加強：[描述]
+
+請生成回饋，包含：
+1. 肯定語（具體說明做得好的地方）
+2. 建設性建議（指出可以改進的方向）
+3. 鼓勵語（激勵繼續努力）
+
+語氣要求：
+- 正向積極
+- 具體不空泛
+- 適合 [年級] 學生閱讀
+- 字數控制在 80-120 字</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+
+                <div class="example-box">
+                    <h4>批次生成模板</h4>
+                    <pre>請根據以下成績分佈，為不同程度的學生生成適合的回饋模板：
+
+成績分佈：
+- 90-100 分：[人數]
+- 80-89 分：[人數]
+- 70-79 分：[人數]
+- 60-69 分：[人數]
+- 60 分以下：[人數]
+
+請為每個級距生成 2-3 種回饋模板，
+讓教師可以根據學生個別狀況選用或修改。</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: 自評互評表 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>自評與互評表設計</h2>
+
+                <div class="example-box">
+                    <h4>學生自評表模板</h4>
+                    <pre>請設計一份學生自評表：
+
+活動/作業名稱：[名稱]
+年級：[年級]
+自評項目：[要評估哪些面向]
+
+自評表設計要求：
+1. 評估項目（5-8 項）
+   - 每項用學生能理解的語言描述
+   - 涵蓋知識、技能、態度
+
+2. 評分方式（建議用表情或星星）
+   - ★★★ 我做得很好
+   - ★★ 我做到了基本要求
+   - ★ 我還需要加油
+
+3. 反思問題（2-3 題）
+   - 這次學習我最大的收穫是...
+   - 下次我想改進的是...
+   - 我還想學習...
+
+請用表格呈現，適合國小學生填寫。</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+
+                <div class="example-box">
+                    <h4>同儕互評表模板</h4>
+                    <pre>請設計一份同儕互評表：
+
+評量活動：[口頭報告/小組作品/表演等]
+年級：[年級]
+
+互評表要求：
+1. 評分項目（3-5 項，簡單明確）
+2. 評分等級（使用數字或圖示）
+3. 加入「一個優點」和「一個建議」的質性回饋欄位
+4. 提醒學生互評禮儀
+
+確保評分標準客觀，減少人情因素影響。</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: 主題式學習單 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>主題式學習單範例</h2>
+
+                <div class="example-box">
+                    <h4>探究式學習單：太空探測</h4>
+                    <pre>請設計一份「太空探測」主題的探究式學習單：
+
+年級：國小五年級
+主題：人類的太空探索
+學習目標：認識太空探測的歷史和方法
+
+學習單架構：
+
+【引發好奇】
+- 一張太空照片 + 3 個觀察問題
+
+【背景知識】
+- 簡要介紹（150 字）+ 填空題確認理解
+
+【探究活動】
+- 提供 2-3 個太空任務資料（登月、火星探測等）
+- 引導學生比較、分析的問題
+
+【延伸思考】
+- 開放性問題：如果你是太空科學家，你想探測什麼？為什麼？
+
+【自我檢核】
+- 我學到了...
+- 我還想知道...</pre>
+                    <button class="copy-btn" onclick="copyTemplate(this)">複製模板</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: 實作練習 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>實作練習</h2>
+
+                <div class="practice-box">
+                    <h4>練習 1：設計差異化學習單</h4>
+                    <p>選擇一個你任教的單元，使用差異化學習單模板，設計三個難度版本的學習單。</p>
+                    <div class="input-wrapper">
+                        <textarea class="practice-input" id="practice1" placeholder="在這裡寫下你的提示詞..."></textarea>
+                        <button class="copy-input-btn" onclick="copyInput('practice1')">複製</button>
+                    </div>
+                </div>
+
+                <div class="practice-box">
+                    <h4>練習 2：生成評量題目</h4>
+                    <p>為同一單元設計一份包含選擇題、填充題、簡答題的小測驗（共 10 題）。</p>
+                    <div class="input-wrapper">
+                        <textarea class="practice-input" id="practice2" placeholder="在這裡寫下你的提示詞..."></textarea>
+                        <button class="copy-input-btn" onclick="copyInput('practice2')">複製</button>
+                    </div>
+                </div>
+
+                <div class="practice-box">
+                    <h4>練習 3：設計回饋語</h4>
+                    <p>假設你剛改完一份作業，請設計針對不同表現程度學生的回饋語模板。</p>
+                    <div class="input-wrapper">
+                        <textarea class="practice-input" id="practice3" placeholder="在這裡寫下你的提示詞..."></textarea>
+                        <button class="copy-input-btn" onclick="copyInput('practice3')">複製</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: 總結 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Part 2 完整回顧</h2>
+
+                <div class="template-grid">
+                    <div class="template-card">
+                        <h4>2-1 文案撰寫</h4>
+                        <p>行銷文案、社群貼文、Email</p>
+                    </div>
+                    <div class="template-card">
+                        <h4>2-2 教案設計</h4>
+                        <p>目標、流程、評量、差異化</p>
+                    </div>
+                    <div class="template-card">
+                        <h4>2-3 學習單生成</h4>
+                        <p>差異化、評量題、回饋語</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box" style="margin-top: 30px;">
+                    <h4>接下來的課程</h4>
+                    <p>在 Part 3 中，我們將進入<strong>圖像生成提示詞</strong>的世界！學習如何用 AI 工具（如 Midjourney、DALL-E）創造教學素材、簡報圖片、社群視覺。</p>
+                </div>
+
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="Part3-1_圖像提示詞基礎.html" class="nav-btn" style="display: inline-block; background: linear-gradient(135deg, #ad1457, #d81b60); border: none; padding: 15px 40px; font-size: 18px;">
+                        前往 Part 3 →
+                    </a>
+                </div>
+
+                <div class="footer-info">
+                    © 2026 阿亮老師 | 提示詞工程實戰教學
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide-number">
+        <span id="currentSlide">1</span> / <span id="totalSlides">11</span>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        document.getElementById('totalSlides').textContent = totalSlides;
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.classList.remove('active');
+                if (i === index) slide.classList.add('active');
+            });
+            document.getElementById('currentSlide').textContent = index + 1;
+            document.querySelector('.prev-arrow').disabled = index === 0;
+            document.querySelector('.next-arrow').disabled = index === totalSlides - 1;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        }
+
+        function copyTemplate(btn) {
+            const pre = btn.previousElementSibling;
+            navigator.clipboard.writeText(pre.textContent).then(() => {
+                btn.textContent = '已複製！';
+                setTimeout(() => btn.textContent = '複製模板', 2000);
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+            else if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        showSlide(0);
+
+        // 全螢幕切換
+        function toggleFullscreen() {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                btn.textContent = '離開全螢幕';
+            } else {
+                document.exitFullscreen();
+                btn.textContent = '全螢幕';
+            }
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) {
+                btn.textContent = '全螢幕';
+            }
+        });
+
+        // 複製練習輸入框內容
+        function copyInput(id) {
+            const textarea = document.getElementById(id);
+            const btn = textarea.parentElement.querySelector('.copy-input-btn');
+            if (textarea.value.trim() === '') {
+                alert('請先輸入內容再複製！');
+                return;
+            }
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                btn.textContent = '已複製！';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = '複製';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

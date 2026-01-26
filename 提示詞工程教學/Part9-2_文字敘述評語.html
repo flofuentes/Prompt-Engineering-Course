@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Part 9-2：文字敘述評語設計</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a237e 50%, #283593 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            padding-top: 80px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(2px 2px at 20px 30px, white, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 90px 40px, white, transparent),
+                radial-gradient(2px 2px at 160px 120px, rgba(255,255,255,0.9), transparent),
+                radial-gradient(1px 1px at 230px 80px, white, transparent),
+                radial-gradient(2px 2px at 300px 150px, rgba(255,255,255,0.7), transparent);
+            background-size: 550px 250px;
+            animation: twinkle 8s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+        }
+
+        /* 導航列 */
+        .nav-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(26, 35, 126, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 10000;
+        }
+
+        .nav-title {
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #4fc3f7, #81d4fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(100, 181, 246, 0.3);
+            border-color: #64b5f6;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header .part-number {
+            display: inline-block;
+            background: linear-gradient(135deg, #0277bd, #039be5);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .header h1 {
+            font-size: 42px;
+            margin-bottom: 15px;
+            text-shadow: 0 4px 20px rgba(79, 195, 247, 0.5);
+        }
+
+        .header p {
+            font-size: 20px;
+            opacity: 0.9;
+            color: #b3e5fc;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            padding: 35px;
+            margin-bottom: 30px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        .content-card h2 {
+            color: #0277bd;
+            font-size: 26px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #039be5;
+        }
+
+        .content-card h3 {
+            color: #0288d1;
+            font-size: 20px;
+            margin: 25px 0 15px 0;
+        }
+
+        .content-card p {
+            font-size: 16px;
+            line-height: 1.8;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .prompt-box {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border-left: 5px solid #ff6f00;
+            padding: 25px;
+            border-radius: 0 15px 15px 0;
+            margin: 20px 0;
+        }
+
+        .prompt-box h4 {
+            color: #e65100;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        .prompt-box pre {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+            font-size: 14px;
+            line-height: 1.7;
+            color: #333;
+            white-space: pre-wrap;
+        }
+
+        .code-block {
+            background: linear-gradient(135deg, #1e3a5f, #2d5a87);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        .code-block h4 {
+            color: #81d4fa;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .code-block pre {
+            color: #e0e0e0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .code-block .comment { color: #6a9955; }
+        .code-block .keyword { color: #569cd6; }
+        .code-block .string { color: #ce9178; }
+        .code-block .function { color: #dcdcaa; }
+
+        .copy-btn {
+            background: linear-gradient(135deg, #0277bd, #039be5);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+
+        .copy-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(2, 119, 189, 0.4);
+        }
+
+        .example-box {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            border-left: 5px solid #0277bd;
+        }
+
+        .example-box h4 {
+            color: #01579b;
+            margin-bottom: 15px;
+        }
+
+        .feedback-sample {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border: 2px solid #039be5;
+        }
+
+        .feedback-sample .label {
+            font-size: 12px;
+            color: #0277bd;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .feedback-sample .text {
+            font-size: 16px;
+            line-height: 1.8;
+            color: #333;
+        }
+
+        .structure-list {
+            list-style: none;
+        }
+
+        .structure-list li {
+            padding: 15px 20px;
+            margin-bottom: 12px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            border-left: 4px solid #0277bd;
+            transition: all 0.3s;
+        }
+
+        .structure-list li:hover {
+            background: #e3f2fd;
+            transform: translateX(5px);
+        }
+
+        .structure-list li strong {
+            color: #0277bd;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #e1f5fe, #b3e5fc);
+            border-left: 5px solid #0288d1;
+            padding: 20px;
+            border-radius: 0 12px 12px 0;
+            margin: 20px 0;
+        }
+
+        .highlight-box h4 {
+            color: #01579b;
+            margin-bottom: 10px;
+        }
+
+        .nav-buttons-bottom {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .nav-btn-bottom {
+            padding: 15px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-btn-bottom.prev {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .nav-btn-bottom.next {
+            background: linear-gradient(135deg, #0277bd, #039be5);
+            color: white;
+        }
+
+        .nav-btn-bottom:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 28px; }
+            .content-card { padding: 20px; }
+            .nav-bar { padding: 0 15px; }
+            .nav-title { font-size: 14px; }
+            .nav-btn { padding: 6px 12px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <span class="nav-title">9-2 文字敘述評語設計</span>
+        <div class="nav-buttons">
+            <a href="index2.html" class="nav-btn">首頁</a>
+            <a href="Part9-3_Google_TTS整合.html" class="nav-btn">下一章</a>
+            <button class="nav-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="nav-btn">YT</a>
+            <a href="https://www.facebook.com/?locale=zh_TW" target="_blank" class="nav-btn">FB</a>
+            <a href="https://www.facebook.com/groups/2754139931432955?locale=zh_TW" target="_blank" class="nav-btn">3A</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <div class="part-number">Part 9-2</div>
+            <h1>文字敘述評語設計</h1>
+            <p>Descriptive Feedback Design</p>
+        </div>
+
+        <!-- 評語設計原則 -->
+        <div class="content-card">
+            <h2>文字評語設計原則</h2>
+            <p>
+                好的文字評語能讓學生清楚了解自己的表現、獲得鼓勵、並知道如何改進。
+                以下是設計 AI 生成評語的關鍵原則：
+            </p>
+
+            <ul class="structure-list">
+                <li>
+                    <strong>肯定具體優點（40%）</strong>
+                    不說「做得很好」，而是說「你對資料的分析很有條理，特別是用圖表呈現數據的方式很清晰」
+                </li>
+                <li>
+                    <strong>描述觀察到的亮點（30%）</strong>
+                    指出作品中具體的元素，如「你引用了三種不同來源的資料」「你的結論呼應了開頭的問題」
+                </li>
+                <li>
+                    <strong>提供改進建議（20%）</strong>
+                    用「如果...會更好」的句型，如「如果能加入更多自己的觀點，論述會更有說服力」
+                </li>
+                <li>
+                    <strong>鼓勵與期許（10%）</strong>
+                    結尾給予正面期待，如「期待看到你下次的精彩作品」「相信你會越來越進步」
+                </li>
+            </ul>
+        </div>
+
+        <!-- 提示詞設計 -->
+        <div class="content-card">
+            <h2>AI 評語生成提示詞</h2>
+
+            <div class="prompt-box">
+                <h4>向 AI 請求設計評語生成提示詞</h4>
+                <pre>請幫我設計一個用於 AI 生成學習評語的提示詞，需求如下：
+
+1. 評語長度：50-80 字
+2. 語氣：溫暖、鼓勵、專業
+3. 人稱：使用「你」稱呼學生
+4. 結構：
+   - 開頭：肯定一個具體優點
+   - 中間：描述觀察到的亮點或特色
+   - 結尾：一個溫和的改進建議 + 鼓勵
+
+5. 避免：
+   - 空泛的讚美（如「很棒」「很好」）
+   - 負面或批評性的語氣
+   - 過長的句子
+
+6. 請提供 5 個不同風格的評語範例</pre>
+            </div>
+
+            <h3>評語範例</h3>
+            <div class="example-box">
+                <h4>不同情境的評語示範</h4>
+
+                <div class="feedback-sample">
+                    <div class="label">探究報告 - 表現優秀</div>
+                    <div class="text">
+                        你對海洋塑膠污染的研究相當深入，引用了多元的數據資料佐證論點，論述邏輯清晰有力。
+                        特別欣賞你提出的解決方案，展現了跨領域思考的能力。如果能加入更多個人觀察會更有說服力。
+                        期待你持續探索！
+                    </div>
+                </div>
+
+                <div class="feedback-sample">
+                    <div class="label">創意作品 - 表現良好</div>
+                    <div class="text">
+                        你的海底世界繪畫色彩豐富、構圖有層次感，珊瑚和魚群的細節處理得很用心。
+                        可以看出你對海洋生態有細膩的觀察。
+                        建議嘗試加入光影變化，讓畫面更立體。繼續創作，你的進步有目共睹！
+                    </div>
+                </div>
+
+                <div class="feedback-sample">
+                    <div class="label">學習心得 - 需要改進</div>
+                    <div class="text">
+                        感謝你分享這次的學習心得，可以感受到你對這個主題的興趣。
+                        你提到了幾個重要的概念，顯示有認真聽講。
+                        如果能舉出具體的例子來說明你的想法，心得會更加充實。加油，老師相信你做得到！
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GAS 實作 -->
+        <div class="content-card">
+            <h2>GAS 評語生成函數</h2>
+
+            <div class="code-block">
+                <h4>descriptive-feedback.gs - 文字評語生成</h4>
+                <pre><span class="comment">/**
+ * 生成文字敘述評語
+ * @param {string} studentWork - 學生作品
+ * @param {string} workType - 作品類型（report/art/reflection）
+ * @returns {string} 文字評語
+ */</span>
+<span class="keyword">function</span> <span class="function">generateDescriptiveFeedback</span>(studentWork, workType = <span class="string">'report'</span>) {
+  <span class="keyword">const</span> API_KEY = PropertiesService.getScriptProperties().getProperty(<span class="string">'GEMINI_API_KEY'</span>);
+  <span class="keyword">const</span> API_URL = <span class="string">`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`</span>;
+
+  <span class="comment">// 根據作品類型調整提示詞</span>
+  <span class="keyword">const</span> typePrompts = {
+    report: <span class="string">'探究報告，著重研究方法、資料分析、論證邏輯'</span>,
+    art: <span class="string">'創意作品，著重創意表現、技巧運用、美感呈現'</span>,
+    reflection: <span class="string">'學習心得，著重反思深度、連結生活、個人成長'</span>
+  };
+
+  <span class="keyword">const</span> prompt = <span class="string">`你是一位溫暖專業的教師，請針對以下學生的${typePrompts[workType] || typePrompts.report}撰寫評語。
+
+## 學生作品
+${studentWork}
+
+## 評語要求
+1. 長度：50-80 字
+2. 語氣：溫暖、鼓勵、專業
+3. 人稱：使用「你」
+4. 結構：
+   - 肯定一個具體優點（不用空泛讚美）
+   - 描述觀察到的亮點
+   - 一個溫和的改進建議
+   - 正面的鼓勵結尾
+
+## 輸出
+請只輸出評語文字，不要加任何前綴或說明。`</span>;
+
+  <span class="keyword">const</span> requestBody = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.8,
+      topP: 0.9,
+      maxOutputTokens: 256
+    }
+  };
+
+  <span class="keyword">const</span> options = {
+    method: <span class="string">'post'</span>,
+    contentType: <span class="string">'application/json'</span>,
+    payload: JSON.stringify(requestBody),
+    muteHttpExceptions: <span class="keyword">true</span>
+  };
+
+  <span class="keyword">try</span> {
+    <span class="keyword">const</span> response = UrlFetchApp.fetch(API_URL, options);
+    <span class="keyword">const</span> result = JSON.parse(response.getContentText());
+
+    <span class="keyword">if</span> (result.candidates && result.candidates[0]) {
+      <span class="keyword">return</span> result.candidates[0].content.parts[0].text.trim();
+    }
+    <span class="keyword">return</span> getDefaultDescriptiveFeedback();
+  } <span class="keyword">catch</span> (error) {
+    Logger.log(<span class="string">'Error: '</span> + error.toString());
+    <span class="keyword">return</span> getDefaultDescriptiveFeedback();
+  }
+}
+
+<span class="comment">/**
+ * 預設評語
+ */</span>
+<span class="keyword">function</span> <span class="function">getDefaultDescriptiveFeedback</span>() {
+  <span class="keyword">return</span> <span class="string">'感謝你用心完成這份作品！老師已經收到，將仔細閱讀後給予更詳細的回饋。請繼續保持學習的熱忱，期待看到你更多精彩的表現！'</span>;
+}
+
+<span class="comment">/**
+ * 完整評語生成（四字 + 文字 + 分數）
+ */</span>
+<span class="keyword">function</span> <span class="function">generateCompleteFeedback</span>(studentWork, workType) {
+  <span class="keyword">const</span> API_KEY = PropertiesService.getScriptProperties().getProperty(<span class="string">'GEMINI_API_KEY'</span>);
+  <span class="keyword">const</span> API_URL = <span class="string">`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`</span>;
+
+  <span class="keyword">const</span> prompt = <span class="string">`請評估學生作品並生成完整評語。
+
+## 學生作品
+${studentWork}
+
+## 回傳格式（嚴格 JSON）
+{
+  "fourChar": "○○○○・○○○○",
+  "feedback": "50-80字文字評語，溫暖鼓勵，具體指出優點和建議",
+  "score": 1-5,
+  "highlights": ["亮點1", "亮點2"],
+  "suggestion": "一個具體改進建議"
+}`</span>;
+
+  <span class="keyword">const</span> requestBody = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 512
+    }
+  };
+
+  <span class="keyword">const</span> options = {
+    method: <span class="string">'post'</span>,
+    contentType: <span class="string">'application/json'</span>,
+    payload: JSON.stringify(requestBody),
+    muteHttpExceptions: <span class="keyword">true</span>
+  };
+
+  <span class="keyword">try</span> {
+    <span class="keyword">const</span> response = UrlFetchApp.fetch(API_URL, options);
+    <span class="keyword">const</span> result = JSON.parse(response.getContentText());
+
+    <span class="keyword">if</span> (result.candidates && result.candidates[0]) {
+      <span class="keyword">const</span> text = result.candidates[0].content.parts[0].text;
+      <span class="keyword">const</span> jsonMatch = text.match(/\{[\s\S]*\}/);
+      <span class="keyword">if</span> (jsonMatch) {
+        <span class="keyword">return</span> JSON.parse(jsonMatch[0]);
+      }
+    }
+    <span class="keyword">return</span> {
+      fourChar: <span class="string">"持續努力・未來可期"</span>,
+      feedback: getDefaultDescriptiveFeedback(),
+      score: 3,
+      highlights: [],
+      suggestion: <span class="string">"繼續保持學習熱忱"</span>
+    };
+  } <span class="keyword">catch</span> (error) {
+    Logger.log(<span class="string">'Error: '</span> + error.toString());
+    <span class="keyword">return</span> <span class="keyword">null</span>;
+  }
+}
+
+<span class="comment">/**
+ * 格式化完整 LINE 訊息
+ */</span>
+<span class="keyword">function</span> <span class="function">formatCompleteLineMessage</span>(feedback) {
+  <span class="keyword">const</span> stars = <span class="string">'★'</span>.repeat(feedback.score) + <span class="string">'☆'</span>.repeat(5 - feedback.score);
+
+  <span class="keyword">let</span> message = <span class="string">`✨ ${feedback.fourChar} ✨\n\n`</span>;
+  message += <span class="string">`${feedback.feedback}\n\n`</span>;
+  message += <span class="string">`評分：${stars}\n`</span>;
+
+  <span class="keyword">if</span> (feedback.highlights && feedback.highlights.length > 0) {
+    message += <span class="string">`\n亮點：\n`</span>;
+    feedback.highlights.forEach(h => {
+      message += <span class="string">`  • ${h}\n`</span>;
+    });
+  }
+
+  <span class="keyword">if</span> (feedback.suggestion) {
+    message += <span class="string">`\n建議：${feedback.suggestion}`</span>;
+  }
+
+  <span class="keyword">return</span> message;
+}
+
+<span class="comment">/**
+ * 測試函數
+ */</span>
+<span class="keyword">function</span> <span class="function">testDescriptiveFeedback</span>() {
+  <span class="keyword">const</span> testWork = <span class="string">`
+我這次研究的是學校附近的空氣品質。
+我用 AirBox 測量了一個星期的 PM2.5 數值，
+發現早上 7-8 點和下午 5-6 點數值最高，
+應該是因為交通尖峰時間車輛比較多。
+我覺得學校可以在這些時段減少戶外活動。
+  `</span>;
+
+  <span class="keyword">const</span> result = generateCompleteFeedback(testWork, <span class="string">'report'</span>);
+  Logger.log(JSON.stringify(result, <span class="keyword">null</span>, 2));
+  Logger.log(<span class="string">'---'</span>);
+  Logger.log(formatCompleteLineMessage(result));
+}</pre>
+                <button class="copy-btn" onclick="copyCode(this)">複製程式碼</button>
+            </div>
+        </div>
+
+        <!-- 評語風格變化 -->
+        <div class="content-card">
+            <h2>評語風格變化</h2>
+            <p>根據不同情境，可以調整 AI 生成評語的風格：</p>
+
+            <div class="example-box">
+                <h4>風格調整提示詞</h4>
+                <div class="feedback-sample">
+                    <div class="label">正式學術風格</div>
+                    <div class="text">請使用正式、學術性的語氣撰寫評語，著重分析作品的學術價值和研究方法。</div>
+                </div>
+                <div class="feedback-sample">
+                    <div class="label">親切師長風格</div>
+                    <div class="text">請使用溫暖、像家長般關愛的語氣，讓學生感受到被支持和理解。</div>
+                </div>
+                <div class="feedback-sample">
+                    <div class="label">同儕激勵風格</div>
+                    <div class="text">請使用年輕、活潑的語氣，像學長姐給學弟妹的鼓勵，充滿正能量。</div>
+                </div>
+            </div>
+
+            <div class="highlight-box">
+                <h4>評語品質檢核</h4>
+                <p>
+                    <strong>具體性：</strong>評語是否提到作品中的具體內容？<br>
+                    <strong>建設性：</strong>建議是否可行且有幫助？<br>
+                    <strong>正向性：</strong>整體語氣是否讓學生感到被肯定？<br>
+                    <strong>長度適中：</strong>50-80 字是否足夠清晰又不冗長？
+                </p>
+            </div>
+        </div>
+
+        <!-- 導航按鈕 -->
+        <div class="nav-buttons-bottom">
+            <a href="Part9-1_四字評語生成.html" class="nav-btn-bottom prev">← 9-1 四字評語生成</a>
+            <a href="Part9-3_Google_TTS整合.html" class="nav-btn-bottom next">Part 9-3 Google TTS 整合 →</a>
+        </div>
+    </div>
+
+    <script>
+        function copyCode(btn) {
+            const codeBlock = btn.previousElementSibling;
+            const code = codeBlock.textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                btn.textContent = '已複製！';
+                setTimeout(() => btn.textContent = '複製程式碼', 2000);
+            });
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Part 2 - 太空與海洋教學備課</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0d47a1 0%, #01579b 50%, #006064 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            color: #333;
+        }
+
+        /* 動態波浪背景 */
+        body::before {
+            content: '';
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 30%;
+            background: linear-gradient(180deg, transparent, rgba(0, 96, 100, 0.3));
+            z-index: 0;
+        }
+
+        /* 導航列 */
+        .nav-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(13, 71, 161, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 10000;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .nav-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #4fc3f7;
+            letter-spacing: 1px;
+        }
+
+        .nav-buttons { display: flex; gap: 12px; }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* 導航箭頭 */
+        .nav-arrow {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(13, 71, 161, 0.8);
+            color: white;
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.3);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 9000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-arrow:hover {
+            background: rgba(2, 119, 189, 0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+        .prev-arrow { left: 30px; }
+        .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* 投影片容器 */
+        .slide-container {
+            width: 100%;
+            height: 100vh;
+            padding-top: 60px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .slide {
+            position: absolute;
+            top: 60px; left: 0;
+            width: 100%;
+            height: calc(100vh - 60px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 10;
+        }
+
+        .slide.active {
+            display: flex;
+            opacity: 1;
+            z-index: 20;
+        }
+
+        /* 內容卡片 */
+        .content-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            padding: 45px 55px;
+            max-width: 1350px;
+            width: 95%;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* 標題樣式 */
+        h1 {
+            color: #0d47a1;
+            font-size: 46px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        h2 {
+            color: #0d47a1;
+            font-size: 32px;
+            margin-bottom: 28px;
+            border-bottom: 4px solid #0288d1;
+            padding-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        h3 { color: #01579b; font-size: 24px; margin: 25px 0 15px 0; }
+        h4 { color: #0277bd; font-size: 20px; margin: 20px 0 10px 0; }
+
+        p, li {
+            font-size: 18px;
+            line-height: 1.9;
+            color: #444;
+            margin-bottom: 12px;
+        }
+
+        ul, ol {
+            margin-left: 25px;
+            margin-bottom: 20px;
+        }
+
+        code {
+            background: #e1f5fe;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-family: 'Consolas', monospace;
+            color: #01579b;
+            font-weight: 600;
+        }
+
+        pre {
+            background: linear-gradient(135deg, #0d47a1, #01579b);
+            color: #e1f5fe;
+            padding: 25px 30px;
+            border-radius: 16px;
+            overflow-x: auto;
+            margin: 25px 0;
+            font-size: 15px;
+            line-height: 1.7;
+            font-family: 'Consolas', monospace;
+            box-shadow: 0 8px 25px rgba(13, 71, 161, 0.3);
+        }
+
+        /* 提示方塊 */
+        .box {
+            padding: 22px 28px;
+            border-radius: 16px;
+            margin: 25px 0;
+            border-left: 6px solid;
+            font-size: 17px;
+            line-height: 1.8;
+        }
+        .space { background: #e3f2fd; border-color: #1976d2; color: #0d47a1; }
+        .ocean { background: #e0f7fa; border-color: #00838f; color: #006064; }
+        .tip { background: #e8f5e9; border-color: #43a047; color: #1b5e20; }
+        .warning { background: #fff3e0; border-color: #ff9800; color: #e65100; }
+        .prompt { background: #f3e5f5; border-color: #7b1fa2; color: #4a148c; }
+
+        /* 主題標籤 */
+        .theme-tag {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        .tag-space { background: linear-gradient(135deg, #1565c0, #1976d2); color: white; }
+        .tag-ocean { background: linear-gradient(135deg, #00838f, #0097a7); color: white; }
+
+        /* 概念卡片網格 */
+        .concept-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 22px;
+            margin-top: 25px;
+        }
+
+        .concept-card {
+            background: linear-gradient(135deg, #f5f5f5, #e3f2fd);
+            padding: 25px;
+            border-radius: 16px;
+            border: 2px solid #bbdefb;
+            transition: all 0.3s ease;
+        }
+        .concept-card:hover {
+            transform: translateY(-6px);
+            border-color: #1976d2;
+            box-shadow: 0 10px 30px rgba(13, 71, 161, 0.15);
+        }
+        .concept-card.space-theme {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-color: #1976d2;
+        }
+        .concept-card.ocean-theme {
+            background: linear-gradient(135deg, #e0f7fa, #b2ebf2);
+            border-color: #00838f;
+        }
+
+        /* 流程圖樣式 */
+        .flow-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        .flow-step {
+            background: linear-gradient(135deg, #0d47a1, #1565c0);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 15px;
+            text-align: center;
+            min-width: 140px;
+            box-shadow: 0 5px 15px rgba(13, 71, 161, 0.3);
+        }
+
+        .flow-step .step-num {
+            font-size: 28px;
+            font-weight: 800;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .flow-arrow {
+            font-size: 28px;
+            color: #0d47a1;
+        }
+
+        /* 差異化教學表格 */
+        .diff-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            font-size: 16px;
+        }
+
+        .diff-table th, .diff-table td {
+            padding: 16px 18px;
+            text-align: left;
+            border-bottom: 2px solid #e3f2fd;
+        }
+
+        .diff-table th {
+            background: linear-gradient(135deg, #0d47a1, #1565c0);
+            color: white;
+            font-weight: 700;
+        }
+
+        .diff-table tr:hover {
+            background: #f5f5f5;
+        }
+
+        .level-high { background: #c8e6c9; }
+        .level-mid { background: #fff9c4; }
+        .level-low { background: #ffccbc; }
+
+        /* 頁碼指示器 */
+        .indicators {
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 4000;
+            padding: 12px 25px;
+            background: rgba(13, 71, 161, 0.9);
+            border-radius: 30px;
+            backdrop-filter: blur(5px);
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .dot.active {
+            background: #4fc3f7;
+            transform: scale(1.4);
+        }
+
+        /* 封面樣式 */
+        .cover-slide {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .cover-icons {
+            font-size: 60px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 30px;
+        }
+
+        .cover-subtitle {
+            color: #0277bd;
+            font-size: 22px;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+        }
+
+        .cover-desc {
+            font-size: 18px;
+            color: #666;
+            margin-top: 25px;
+            max-width: 750px;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 導航列 -->
+    <div class="nav-bar">
+        <div class="nav-title">Part 2 - 太空與海洋教學備課</div>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-btn">首頁</a>
+            <button class="nav-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.facebook.com/?locale=zh_TW" target="_blank" class="nav-btn">FB</a>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="nav-btn">YT</a>
+        </div>
+    </div>
+
+    <!-- 投影片內容 -->
+    <div class="slide-container">
+
+        <!-- Slide 1: 封面 -->
+        <div class="slide active">
+            <div class="content-card cover-slide">
+                <div class="cover-icons">
+                    <span>Rocket</span>
+                    <span>Ocean</span>
+                </div>
+                <div class="cover-subtitle">AI-Powered Teaching Preparation</div>
+                <h1>太空與海洋教學備課</h1>
+                <p class="cover-desc">
+                    運用 AI 協助教師進行情境式課程設計<br>
+                    從教學目標拆解到差異化學習單生成的完整實作
+                </p>
+                <div style="margin-top: 30px; display: flex; gap: 15px;">
+                    <span class="theme-tag tag-space">太空探測</span>
+                    <span class="theme-tag tag-ocean">海洋觀測</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: 本單元目標 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>本單元學習目標</h2>
+                <p>透過實作演練，你將學會：</p>
+                <div class="concept-grid">
+                    <div class="concept-card space-theme">
+                        <h4>教學目標拆解</h4>
+                        <p>運用 AI 將「太空探測」「海洋觀測」主題拆解為具體可教學的目標</p>
+                    </div>
+                    <div class="concept-card ocean-theme">
+                        <h4>情境式課程設計</h4>
+                        <p>以任務導向的方式設計課程流程，提升學習動機與參與度</p>
+                    </div>
+                    <div class="concept-card space-theme">
+                        <h4>差異化學習單</h4>
+                        <p>根據不同程度學生，生成適性化的學習單版本</p>
+                    </div>
+                    <div class="concept-card ocean-theme">
+                        <h4>教師專屬 Prompt</h4>
+                        <p>建立可重複使用的提示詞模板，提升備課效率</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 情境設定 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>情境設定：兩大科學主題</h2>
+                <div class="concept-grid">
+                    <div class="concept-card space-theme">
+                        <h3>太空探測 Space Exploration</h3>
+                        <ul>
+                            <li>火星探測任務與探測車技術</li>
+                            <li>人造衛星與太空站運作</li>
+                            <li>太空科技在日常生活的應用</li>
+                            <li>未來太空旅行的可能性</li>
+                        </ul>
+                        <p style="margin-top: 15px;"><strong>核心問題：</strong>人類如何探索未知的宇宙？</p>
+                    </div>
+                    <div class="concept-card ocean-theme">
+                        <h3>海洋觀測 Ocean Observation</h3>
+                        <ul>
+                            <li>深海探測技術與潛水艇</li>
+                            <li>海洋生態監測系統</li>
+                            <li>海洋資源與永續利用</li>
+                            <li>氣候變遷與海洋的關係</li>
+                        </ul>
+                        <p style="margin-top: 15px;"><strong>核心問題：</strong>人類如何了解並保護海洋？</p>
+                    </div>
+                </div>
+                <div class="box tip">
+                    這兩個主題都涉及「探索未知」與「科技應用」，非常適合培養學生的科學素養與問題解決能力！
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 教學目標拆解 Prompt -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>實作一：教學目標拆解</h2>
+                <div class="box prompt">
+                    <strong>教學目標拆解專用 Prompt：</strong>
+                </div>
+                <pre>## 角色設定
+你是一位課程設計專家，擅長將科學主題轉化為明確的教學目標。
+
+## 任務描述
+請針對「{主題名稱}」，設計適合{年級}學生的教學目標。
+
+## 輸出要求
+請依照布魯姆認知層次，設計以下層級的目標：
+1. 記憶層次（2個目標）：學生能記得的基本知識
+2. 理解層次（2個目標）：學生能解釋的概念
+3. 應用層次（2個目標）：學生能運用的技能
+4. 分析層次（1個目標）：學生能分析的問題
+5. 創造層次（1個目標）：學生能創作的成品
+
+## 格式規範
+- 每個目標以「學生能夠...」開頭
+- 使用具體可觀察的行為動詞
+- 每個目標附上一個評量方式建議</pre>
+            </div>
+        </div>
+
+        <!-- Slide 5: 目標拆解範例 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>教學目標拆解範例</h2>
+                <h3><span class="theme-tag tag-space">太空探測</span> 國小五年級</h3>
+                <table class="diff-table">
+                    <tr>
+                        <th>認知層次</th>
+                        <th>教學目標</th>
+                        <th>評量方式</th>
+                    </tr>
+                    <tr>
+                        <td><strong>記憶</strong></td>
+                        <td>學生能夠說出三種太空探測器的名稱與任務</td>
+                        <td>口頭問答</td>
+                    </tr>
+                    <tr>
+                        <td><strong>理解</strong></td>
+                        <td>學生能夠解釋火星探測車如何傳送資料回地球</td>
+                        <td>概念圖繪製</td>
+                    </tr>
+                    <tr>
+                        <td><strong>應用</strong></td>
+                        <td>學生能夠運用所學設計簡易的太陽能動力模型</td>
+                        <td>實作評量</td>
+                    </tr>
+                    <tr>
+                        <td><strong>分析</strong></td>
+                        <td>學生能夠比較不同行星探測任務的挑戰與解決方案</td>
+                        <td>比較表製作</td>
+                    </tr>
+                    <tr>
+                        <td><strong>創造</strong></td>
+                        <td>學生能夠設計一個假想的海洋星球探測計畫</td>
+                        <td>專題報告</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Slide 6: 情境式課程設計流程 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>實作二：情境式課程設計</h2>
+                <p>任務導向的課程設計流程：</p>
+                <div class="flow-container">
+                    <div class="flow-step">
+                        <span class="step-num">1</span>
+                        創造情境
+                    </div>
+                    <span class="flow-arrow">➜</span>
+                    <div class="flow-step">
+                        <span class="step-num">2</span>
+                        提出任務
+                    </div>
+                    <span class="flow-arrow">➜</span>
+                    <div class="flow-step">
+                        <span class="step-num">3</span>
+                        探究學習
+                    </div>
+                    <span class="flow-arrow">➜</span>
+                    <div class="flow-step">
+                        <span class="step-num">4</span>
+                        成果展現
+                    </div>
+                    <span class="flow-arrow">➜</span>
+                    <div class="flow-step">
+                        <span class="step-num">5</span>
+                        反思延伸
+                    </div>
+                </div>
+                <div class="box space">
+                    <strong>太空情境範例：</strong>「你是 NASA 的太空任務規劃師，要設計一個登陸火星的探測計畫...」
+                </div>
+                <div class="box ocean">
+                    <strong>海洋情境範例：</strong>「你是海洋研究所的科學家，要調查深海熱泉生態系統...」
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: 課程設計 Prompt -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>情境式課程設計 Prompt</h2>
+                <pre>## 角色設定
+你是一位創新教學設計師，專精於設計沉浸式學習體驗。
+
+## 任務描述
+請以「{主題}」為核心，設計一個 {時間長度} 的任務導向課程。
+
+## 設計要求
+1. 創造情境（5分鐘）
+   - 設計一個吸引人的故事背景
+   - 學生扮演的角色身份
+   - 需要解決的核心問題
+
+2. 任務佈達（5分鐘）
+   - 明確的任務目標
+   - 成功標準說明
+   - 可用的資源列表
+
+3. 探究活動（25分鐘）
+   - 分組合作任務
+   - 關鍵知識點融入
+   - 引導問題設計
+
+4. 成果發表（10分鐘）
+   - 各組報告形式
+   - 互評標準
+
+5. 反思活動（5分鐘）
+   - 學習重點回顧
+   - 延伸思考問題
+
+## 輸出格式
+請以教案格式呈現，包含教師說明與學生活動</pre>
+            </div>
+        </div>
+
+        <!-- Slide 8: 差異化教學策略 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>實作三：差異化學習單設計</h2>
+                <p>針對不同程度學生，調整學習單的難度與支持程度：</p>
+                <table class="diff-table">
+                    <tr>
+                        <th>學生程度</th>
+                        <th>學習單特色</th>
+                        <th>支持策略</th>
+                    </tr>
+                    <tr class="level-high">
+                        <td><strong>高成就</strong></td>
+                        <td>
+                            - 開放式問題<br>
+                            - 延伸探究任務<br>
+                            - 跨領域連結
+                        </td>
+                        <td>提供進階資源、鼓勵自主探索</td>
+                    </tr>
+                    <tr class="level-mid">
+                        <td><strong>中成就</strong></td>
+                        <td>
+                            - 引導式問題<br>
+                            - 適度的鷹架支持<br>
+                            - 基礎與進階並重
+                        </td>
+                        <td>提供範例、分步驟引導</td>
+                    </tr>
+                    <tr class="level-low">
+                        <td><strong>需加強</strong></td>
+                        <td>
+                            - 填空式結構<br>
+                            - 圖像化輔助<br>
+                            - 簡化文字敘述
+                        </td>
+                        <td>提供詞彙庫、配對題型、更多視覺提示</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Slide 9: 差異化 Prompt -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>差異化學習單生成 Prompt</h2>
+                <pre>## 角色設定
+你是一位擅長適性化教學的資深教師。
+
+## 任務描述
+請針對「{主題：火星探測}」設計三種版本的學習單，
+分別適用於高成就、中成就、需加強的學生。
+
+## 設計原則
+【高成就版】
+- 問題類型：開放性、需要批判思考
+- 字數要求：完整段落回答
+- 延伸：連結其他科目或議題
+
+【中成就版】
+- 問題類型：引導式問題
+- 支持策略：提供提示詞、思考框架
+- 適度挑戰：2-3 題進階題
+
+【需加強版】
+- 問題類型：是非題、選擇題、填空題
+- 支持策略：圖片輔助、詞彙提供
+- 成功經驗：從簡單開始建立信心
+
+## 共同要求
+- 每份學習單 5-8 題
+- 包含參考答案
+- 附上給教師的使用說明</pre>
+            </div>
+        </div>
+
+        <!-- Slide 10: 學習單範例 - 太空 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2><span class="theme-tag tag-space">太空探測</span> 學習單範例</h2>
+                <div class="concept-grid">
+                    <div class="concept-card" style="background: #c8e6c9;">
+                        <h4>高成就版</h4>
+                        <p><strong>問題：</strong>如果你是火星任務的總指揮，你會如何解決探測車在火星沙塵暴中的通訊中斷問題？請提出至少三種可能的解決方案，並說明優缺點。</p>
+                        <p style="font-size: 14px; color: #666;">（需要創意思考與問題解決能力）</p>
+                    </div>
+                    <div class="concept-card" style="background: #fff9c4;">
+                        <h4>中成就版</h4>
+                        <p><strong>問題：</strong>火星探測車遇到沙塵暴時會面臨什麼困難？請從「能源」和「通訊」兩個角度說明。</p>
+                        <p>提示：想想看太陽能板和無線電訊號會受到什麼影響...</p>
+                        <p style="font-size: 14px; color: #666;">（有引導框架）</p>
+                    </div>
+                    <div class="concept-card" style="background: #ffccbc;">
+                        <h4>需加強版</h4>
+                        <p><strong>問題：</strong>火星沙塵暴會影響探測車的 _____ 板，讓探測車無法獲得足夠的能源。</p>
+                        <p>選項：[ 太陽能 / 風力 / 水力 ]</p>
+                        <p style="font-size: 14px; color: #666;">（填空題，提供選項）</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: 學習單範例 - 海洋 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2><span class="theme-tag tag-ocean">海洋觀測</span> 學習單範例</h2>
+                <div class="concept-grid">
+                    <div class="concept-card" style="background: #c8e6c9;">
+                        <h4>高成就版</h4>
+                        <p><strong>問題：</strong>深海熱泉附近的生物不需要陽光就能存活，這對我們尋找外星生命有什麼啟示？請結合太空探索與海洋科學的知識進行分析。</p>
+                        <p style="font-size: 14px; color: #666;">（跨領域整合思考）</p>
+                    </div>
+                    <div class="concept-card" style="background: #fff9c4;">
+                        <h4>中成就版</h4>
+                        <p><strong>問題：</strong>深海熱泉生物與一般海洋生物有什麼不同？請比較牠們的「能量來源」和「生存環境」。</p>
+                        <p>請完成比較表：</p>
+                        <table style="width:100%; font-size: 14px;">
+                            <tr><td></td><td>熱泉生物</td><td>一般海洋生物</td></tr>
+                            <tr><td>能量來源</td><td>___</td><td>___</td></tr>
+                        </table>
+                    </div>
+                    <div class="concept-card" style="background: #ffccbc;">
+                        <h4>需加強版</h4>
+                        <p><strong>請將圖片與說明配對：</strong></p>
+                        <p>A. 管蟲 → ( ) 在熱泉附近發現的動物</p>
+                        <p>B. 深海潛水艇 → ( ) 科學家探索海底的工具</p>
+                        <p style="font-size: 14px; color: #666;">（配對題，有圖片輔助）</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: 教師專屬 Prompt 庫 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>建立教師專屬 Prompt 庫</h2>
+                <p>將常用的提示詞模板化，快速生成教學資源：</p>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <h4>課程設計類</h4>
+                        <ul>
+                            <li>教學目標拆解器</li>
+                            <li>情境式課程生成器</li>
+                            <li>跨領域主題整合器</li>
+                        </ul>
+                    </div>
+                    <div class="concept-card">
+                        <h4>教材製作類</h4>
+                        <ul>
+                            <li>差異化學習單生成器</li>
+                            <li>知識重點摘要器</li>
+                            <li>概念圖大綱產生器</li>
+                        </ul>
+                    </div>
+                    <div class="concept-card">
+                        <h4>評量設計類</h4>
+                        <ul>
+                            <li>多元評量題目生成器</li>
+                            <li>評分規準設計器</li>
+                            <li>學習回饋語產生器</li>
+                        </ul>
+                    </div>
+                    <div class="concept-card">
+                        <h4>班級經營類</h4>
+                        <ul>
+                            <li>獎勵語句生成器</li>
+                            <li>學習鼓勵信函產生器</li>
+                            <li>家長溝通範本器</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 13: Prompt 模板範例 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>萬用教學 Prompt 模板</h2>
+                <pre>## 基本資訊設定
+教學主題：{輸入主題}
+適用年級：{輸入年級}
+教學時間：{輸入時數}
+學生先備知識：{描述學生已知內容}
+
+## 教師需求
+請協助我完成以下任務（可多選）：
+[ ] 設計教學目標
+[ ] 規劃課程流程
+[ ] 製作學習單
+[ ] 設計評量題目
+[ ] 撰寫教學簡報大綱
+
+## 特殊需求
+差異化教學：{是/否，如是請說明學生組成}
+跨領域整合：{是/否，如是請說明整合領域}
+融入議題：{如：環境教育、科技教育等}
+
+## 輸出格式偏好
+[ ] 條列式
+[ ] 表格
+[ ] 完整文章
+[ ] Markdown 格式
+
+---
+請根據以上資訊，開始生成教學資源。</pre>
+            </div>
+        </div>
+
+        <!-- Slide 14: 實作練習 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>動手練習時間</h2>
+                <div class="box prompt">
+                    <strong>練習任務：</strong>選擇一個你熟悉的教學主題，運用本單元學到的技巧設計一份教學資源。
+                </div>
+                <h3>練習步驟：</h3>
+                <ol>
+                    <li><strong>選擇主題</strong>：可以是太空、海洋，或任何你想教的內容</li>
+                    <li><strong>使用目標拆解 Prompt</strong>：生成該主題的教學目標</li>
+                    <li><strong>設計情境任務</strong>：創造一個吸引學生的學習情境</li>
+                    <li><strong>製作差異化學習單</strong>：針對三種程度設計不同版本</li>
+                    <li><strong>建立你的 Prompt</strong>：將有效的提示詞保存為模板</li>
+                </ol>
+                <div class="box tip">
+                    <strong>小提醒：</strong>不需要一次完成所有內容！從一個小任務開始，逐步累積你的教學 Prompt 庫。
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 15: 總結 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Part 2 總結</h2>
+                <div class="concept-grid">
+                    <div class="concept-card space-theme">
+                        <h4>教學目標拆解</h4>
+                        <p>運用布魯姆認知層次，系統化設計可評量的教學目標</p>
+                    </div>
+                    <div class="concept-card ocean-theme">
+                        <h4>情境式課程</h4>
+                        <p>任務導向的五步驟流程：情境→任務→探究→發表→反思</p>
+                    </div>
+                    <div class="concept-card space-theme">
+                        <h4>差異化學習單</h4>
+                        <p>高成就開放探究、中成就引導支持、需加強視覺輔助</p>
+                    </div>
+                    <div class="concept-card ocean-theme">
+                        <h4>Prompt 模板化</h4>
+                        <p>建立個人專屬的提示詞庫，提升備課效率</p>
+                    </div>
+                </div>
+                <div class="box tip" style="margin-top: 25px;">
+                    <strong>下一單元預告：</strong>我們將進入動手做環節——打造一個結合太空與海洋主題的互動式粒子專案！
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 導航箭頭 -->
+    <button class="nav-arrow prev-arrow" id="prevBtn" onclick="changeSlide(-1)">&#10094;</button>
+    <button class="nav-arrow next-arrow" id="nextBtn" onclick="changeSlide(1)">&#10095;</button>
+
+    <!-- 頁碼 -->
+    <div class="indicators" id="indicatorContainer"></div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        function init() {
+            createIndicators();
+            showSlide(0);
+            updateButtons();
+            document.addEventListener('keydown', handleKeydown);
+        }
+
+        function handleKeydown(e) {
+            if (e.key === 'ArrowLeft') changeSlide(-1);
+            if (e.key === 'ArrowRight') changeSlide(1);
+        }
+
+        function createIndicators() {
+            const container = document.getElementById('indicatorContainer');
+            container.innerHTML = '';
+            slides.forEach((_, index) => {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                dot.onclick = () => goToSlide(index);
+                container.appendChild(dot);
+            });
+        }
+
+        function showSlide(index) {
+            if (index < 0) index = 0;
+            if (index >= totalSlides) index = totalSlides - 1;
+
+            slides.forEach(slide => slide.classList.remove('active'));
+            slides[index].classList.add('active');
+            currentSlide = index;
+
+            const dots = document.querySelectorAll('.dot');
+            dots.forEach((dot, idx) => {
+                dot.classList.toggle('active', idx === index);
+            });
+
+            updateButtons();
+        }
+
+        function changeSlide(direction) {
+            showSlide(currentSlide + direction);
+        }
+
+        function goToSlide(index) {
+            showSlide(index);
+        }
+
+        function updateButtons() {
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6-1 學習單設計原則與 AI 協作 - AI 協作評量設計</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a237e 50%, #283593 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            color: #333;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image:
+                radial-gradient(2px 2px at 20px 30px, white, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 90px 40px, white, transparent),
+                radial-gradient(2px 2px at 160px 120px, rgba(255,255,255,0.9), transparent);
+            background-size: 550px 250px;
+            animation: twinkle 8s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+        }
+
+        .nav-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(26, 35, 126, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 10000;
+        }
+        .nav-title {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #ff8f00, #ffb300);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .nav-buttons { display: flex; gap: 12px; }
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        .nav-btn:hover {
+            background: rgba(255, 143, 0, 0.3);
+            border-color: #ff8f00;
+        }
+
+        .nav-arrow {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(26, 35, 126, 0.8);
+            color: white;
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 143, 0, 0.5);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 9000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-arrow:hover {
+            background: rgba(57, 73, 171, 0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+        .prev-arrow { left: 30px; }
+        .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .slide-container {
+            width: 100%;
+            height: 100vh;
+            padding-top: 60px;
+            position: relative;
+            z-index: 1;
+        }
+        .slide {
+            position: absolute;
+            top: 60px; left: 0;
+            width: 100%;
+            height: calc(100vh - 60px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 10;
+        }
+        .slide.active {
+            display: flex;
+            opacity: 1;
+            z-index: 20;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.97);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            padding: 40px 50px;
+            max-width: 1350px;
+            width: 95%;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 42px;
+            margin-bottom: 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #00695c, #00897b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        h2 {
+            color: #00695c;
+            font-size: 30px;
+            margin-bottom: 25px;
+            border-bottom: 4px solid;
+            border-image: linear-gradient(90deg, #00695c, #00897b) 1;
+            padding-bottom: 12px;
+        }
+        h3 { color: #00796b; font-size: 22px; margin: 20px 0 12px 0; }
+        h4 { color: #00897b; font-size: 18px; margin: 15px 0 8px 0; }
+
+        p, li {
+            font-size: 17px;
+            line-height: 1.8;
+            color: #444;
+            margin-bottom: 10px;
+        }
+        ul, ol { margin-left: 25px; margin-bottom: 15px; }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #e0f2f1, #b2dfdb);
+            border-left: 5px solid #00695c;
+            padding: 20px 25px;
+            border-radius: 0 15px 15px 0;
+            margin: 20px 0;
+        }
+        .highlight-box h4 {
+            color: #00695c;
+            margin-top: 0;
+        }
+
+        .example-box {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border-left: 5px solid #ff6f00;
+            padding: 20px 25px;
+            border-radius: 0 15px 15px 0;
+            margin: 20px 0;
+        }
+        .example-box h4 { color: #e65100; margin-top: 0; }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            margin: 20px 0;
+        }
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .card {
+            background: #f5f5f5;
+            border-radius: 15px;
+            padding: 20px;
+            border-top: 4px solid #00695c;
+        }
+        .card.orange { border-top-color: #ff6f00; }
+        .card.blue { border-top-color: #0277bd; }
+        .card h4 { margin-top: 0; }
+
+        .prompt-box {
+            background: linear-gradient(135deg, #1a237e, #283593);
+            color: #e8eaf6;
+            padding: 20px;
+            border-radius: 12px;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 15px 0;
+            white-space: pre-wrap;
+        }
+
+        .tag {
+            display: inline-block;
+            background: #00695c;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+        .tag.orange { background: #ff6f00; }
+        .tag.blue { background: #0277bd; }
+
+        .progress-indicator {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 9999;
+        }
+        .progress-dot {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .progress-dot.active {
+            background: #ff8f00;
+            transform: scale(1.3);
+        }
+
+        @media (max-width: 900px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            .content-card { padding: 25px; }
+            h1 { font-size: 32px; }
+            h2 { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <div class="nav-title">6-1 學習單設計原則與 AI 協作</div>
+        <div class="nav-buttons">
+            <a href="index2.html" class="nav-btn">首頁</a>
+            <a href="Part6-2_素養題設計.html" class="nav-btn">下一章</a>
+            <button class="nav-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="nav-btn">YT</a>
+            <a href="https://www.facebook.com/?locale=zh_TW" target="_blank" class="nav-btn">FB</a>
+            <a href="https://www.facebook.com/groups/2754139931432955?locale=zh_TW" target="_blank" class="nav-btn">3A</a>
+        </div>
+    </nav>
+
+    <button class="nav-arrow prev-arrow" onclick="prevSlide()">←</button>
+    <button class="nav-arrow next-arrow" onclick="nextSlide()">→</button>
+
+    <div class="slide-container">
+        <!-- Slide 1: 標題頁 -->
+        <div class="slide active">
+            <div class="content-card" style="text-align: center;">
+                <div style="margin-bottom: 30px;">
+                    <span class="tag">Part 6-1</span>
+                    <span class="tag orange">評量設計基礎</span>
+                </div>
+                <h1>學習單設計原則與 AI 協作</h1>
+                <p style="font-size: 22px; color: #00695c; margin: 30px 0;">
+                    差異化設計 × 學習歷程追蹤 × AI 輔助生成
+                </p>
+                <div style="margin-top: 40px; padding: 25px; background: linear-gradient(135deg, #e0f2f1, #b2dfdb); border-radius: 15px;">
+                    <p style="font-size: 18px; margin: 0;">
+                        學習如何運用 AI 設計兼顧理解歷程與表達能力的學習單，<br>
+                        並建立可追蹤學生學習進度的評量系統
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: 學習單設計的核心原則 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>學習單設計的核心原則</h2>
+                <div class="grid-3">
+                    <div class="card">
+                        <h4>1. 目標導向</h4>
+                        <p>每一題都要對應明確的學習目標，避免為出題而出題</p>
+                        <ul>
+                            <li>知識理解層次</li>
+                            <li>應用分析層次</li>
+                            <li>創造評鑑層次</li>
+                        </ul>
+                    </div>
+                    <div class="card orange">
+                        <h4>2. 差異化設計</h4>
+                        <p>同一主題提供不同難度版本，適應學生多元需求</p>
+                        <ul>
+                            <li>基礎版（引導式）</li>
+                            <li>進階版（探究式）</li>
+                            <li>挑戰版（開放式）</li>
+                        </ul>
+                    </div>
+                    <div class="card blue">
+                        <h4>3. 歷程可見</h4>
+                        <p>設計能呈現思考過程的題型，而非只看最終答案</p>
+                        <ul>
+                            <li>推理步驟題</li>
+                            <li>說明理由題</li>
+                            <li>反思回顧題</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 差異化學習單設計 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>差異化學習單設計</h2>
+                <p>以「太空探測」主題為例，展示三種難度版本的設計差異：</p>
+
+                <div class="grid-3" style="margin-top: 25px;">
+                    <div class="card">
+                        <h4 style="color: #4caf50;">基礎版</h4>
+                        <p style="font-size: 14px; color: #666;">適合需要更多引導的學生</p>
+                        <div class="example-box" style="margin: 15px 0;">
+                            <p style="margin: 0; font-size: 15px;">
+                                <strong>題目：</strong>火星探測車「毅力號」使用太陽能板發電。<br><br>
+                                請根據提示完成：<br>
+                                1. 太陽能板的作用是＿＿＿<br>
+                                2. 在火星上可能遇到的問題：（選擇題）<br>
+                                3. 根據課文找出一個解決方法
+                            </p>
+                        </div>
+                    </div>
+                    <div class="card orange">
+                        <h4 style="color: #ff6f00;">進階版</h4>
+                        <p style="font-size: 14px; color: #666;">適合一般程度學生</p>
+                        <div class="example-box" style="margin: 15px 0;">
+                            <p style="margin: 0; font-size: 15px;">
+                                <strong>題目：</strong>火星探測車需要能源才能運作。<br><br>
+                                1. 比較太陽能與核能兩種能源方案的優缺點<br>
+                                2. 火星的環境可能如何影響能源供應？<br>
+                                3. 如果你是工程師，會選擇哪種方案？為什麼？
+                            </p>
+                        </div>
+                    </div>
+                    <div class="card blue">
+                        <h4 style="color: #0277bd;">挑戰版</h4>
+                        <p style="font-size: 14px; color: #666;">適合高成就學生</p>
+                        <div class="example-box" style="margin: 15px 0;">
+                            <p style="margin: 0; font-size: 15px;">
+                                <strong>題目：</strong>設計一個火星基地的能源系統。<br><br>
+                                需考慮：<br>
+                                - 火星環境特性<br>
+                                - 基地人員需求<br>
+                                - 長期維護可行性<br><br>
+                                請繪製系統架構圖並說明設計理由
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: AI 協作生成學習單 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>AI 協作生成學習單</h2>
+                <p>運用 AI 快速生成差異化學習單的提示詞框架：</p>
+
+                <div class="prompt-box">你是一位資深的自然科學教師，專長是設計差異化學習單。
+
+請根據以下條件，生成三種難度版本的學習單：
+
+【主題】太空探測 - 火星任務
+【年級】國中八年級
+【學習目標】
+- 理解太空探測的基本原理
+- 分析不同能源方案的優缺點
+- 培養科學探究與問題解決能力
+
+【輸出格式】
+每個版本需包含：
+1. 版本名稱與適用對象
+2. 3-5 題問答題（含提示或鷹架）
+3. 評分標準（滿分 10 分）
+
+請分別輸出：基礎版、進階版、挑戰版</div>
+
+                <div class="highlight-box">
+                    <h4>提示詞設計要點</h4>
+                    <ul>
+                        <li><strong>角色設定</strong>：明確指定 AI 扮演的專家角色</li>
+                        <li><strong>條件限制</strong>：年級、主題、學習目標都要清楚</li>
+                        <li><strong>輸出格式</strong>：指定結構化的輸出格式</li>
+                        <li><strong>版本區分</strong>：明確要求不同難度版本</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 學習歷程追蹤設計 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>學習歷程追蹤設計</h2>
+                <p>好的學習單不只評量結果，更能追蹤學生的思考歷程：</p>
+
+                <div class="grid-2">
+                    <div class="highlight-box">
+                        <h4>傳統題型（只看結果）</h4>
+                        <p>問：火星探測車使用什麼能源？</p>
+                        <p>答：太陽能 / 核能</p>
+                        <p style="color: #d32f2f; margin-top: 10px;">
+                            ❌ 只能知道學生答對或答錯
+                        </p>
+                    </div>
+                    <div class="example-box">
+                        <h4>歷程導向題型</h4>
+                        <p>問：請說明你認為火星探測車最適合使用哪種能源，並解釋你的推理過程。</p>
+                        <p>評分重點：</p>
+                        <ul style="margin-bottom: 0;">
+                            <li>是否考慮火星環境因素</li>
+                            <li>推理邏輯是否完整</li>
+                            <li>是否有支持證據</li>
+                        </ul>
+                        <p style="color: #2e7d32; margin-top: 10px;">
+                            ✓ 可以看到學生的思考過程
+                        </p>
+                    </div>
+                </div>
+
+                <h3>歷程追蹤的題型設計</h3>
+                <div class="grid-3">
+                    <div class="card">
+                        <h4>推理鏈題</h4>
+                        <p>「根據 A 事實，推論出 B，再推論出 C，最後得到結論」</p>
+                    </div>
+                    <div class="card orange">
+                        <h4>證據引用題</h4>
+                        <p>「請從文章中找出支持你觀點的證據，並說明為什麼」</p>
+                    </div>
+                    <div class="card blue">
+                        <h4>反思後設題</h4>
+                        <p>「這個題目最困難的部分是什麼？你是如何克服的？」</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: AI 輔助追蹤提示詞 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>AI 輔助學習歷程分析</h2>
+                <p>使用 AI 分析學生作答內容，找出思考歷程中的問題：</p>
+
+                <div class="prompt-box">你是一位學習診斷專家，請分析以下學生的作答內容。
+
+【學生作答】
+問題：請說明火星探測車最適合使用哪種能源，並解釋推理過程。
+學生答案：「我覺得用太陽能比較好，因為太陽能是免費的，而且不會污染環境。」
+
+【分析任務】
+1. 識別學生展現的正確概念
+2. 找出可能的迷思概念或知識缺口
+3. 判斷推理邏輯是否完整
+4. 提供針對性的回饋建議
+
+【輸出格式】
+- 正確概念：（列出）
+- 待釐清概念：（列出）
+- 推理缺口：（說明）
+- 建議回饋：（具體可行的教學建議）</div>
+
+                <div class="highlight-box">
+                    <h4>AI 分析結果示例</h4>
+                    <p><strong>正確概念：</strong>知道太陽能是可再生能源、環保</p>
+                    <p><strong>待釐清概念：</strong>「免費」的理解可能不完整（設備成本）</p>
+                    <p><strong>推理缺口：</strong>未考慮火星環境對太陽能的影響（沙塵暴、日照時間）</p>
+                    <p><strong>建議回饋：</strong>引導學生思考：「火星和地球的日照條件有什麼不同？」</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: 實作練習 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>實作練習</h2>
+                <p>現在輪到你來設計一份學習單！</p>
+
+                <div class="example-box">
+                    <h4>練習任務</h4>
+                    <p>主題：<strong>海洋觀測 - 深海探測器</strong></p>
+                    <p>請設計一份包含以下元素的學習單：</p>
+                    <ol>
+                        <li>設定 2-3 個明確的學習目標</li>
+                        <li>設計至少一題「歷程可見」的題目</li>
+                        <li>提供基礎版與進階版兩種難度</li>
+                        <li>撰寫 AI 生成提示詞（可用來快速產生更多題目）</li>
+                    </ol>
+                </div>
+
+                <div class="grid-2" style="margin-top: 25px;">
+                    <div class="highlight-box">
+                        <h4>提示：可以參考的學習目標</h4>
+                        <ul>
+                            <li>了解深海環境的特性（高壓、低溫、無光）</li>
+                            <li>理解深海探測器的設計原理</li>
+                            <li>分析深海探測對科學研究的價值</li>
+                            <li>比較不同深海探測技術的優缺點</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h4>完成後自我檢核</h4>
+                        <ul>
+                            <li>□ 學習目標是否具體可評量？</li>
+                            <li>□ 題目是否能看出學生思考過程？</li>
+                            <li>□ 兩個版本的難度差異是否明顯？</li>
+                            <li>□ AI 提示詞是否足夠詳細？</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: 小結 -->
+        <div class="slide">
+            <div class="content-card" style="text-align: center;">
+                <h2>本單元小結</h2>
+
+                <div class="grid-2" style="text-align: left; margin: 30px 0;">
+                    <div class="highlight-box">
+                        <h4>學習單設計三原則</h4>
+                        <ol>
+                            <li><strong>目標導向</strong>：每題對應明確學習目標</li>
+                            <li><strong>差異化設計</strong>：提供多種難度版本</li>
+                            <li><strong>歷程可見</strong>：能追蹤學生思考過程</li>
+                        </ol>
+                    </div>
+                    <div class="example-box">
+                        <h4>AI 協作重點</h4>
+                        <ol>
+                            <li>善用角色設定與條件限制</li>
+                            <li>要求結構化輸出格式</li>
+                            <li>可用於生成題目與分析作答</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div style="background: linear-gradient(135deg, #e0f2f1, #b2dfdb); padding: 25px; border-radius: 15px;">
+                    <p style="font-size: 20px; margin: 0; color: #00695c;">
+                        <strong>下一單元預告</strong><br>
+                        6-2 素養題與跨領域探究題設計
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="progress-indicator"></div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        function createProgressDots() {
+            const container = document.querySelector('.progress-indicator');
+            for (let i = 0; i < totalSlides; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'progress-dot' + (i === 0 ? ' active' : '');
+                dot.onclick = () => goToSlide(i);
+                container.appendChild(dot);
+            }
+        }
+
+        function updateProgress() {
+            document.querySelectorAll('.progress-dot').forEach((dot, i) => {
+                dot.classList.toggle('active', i === currentSlide);
+            });
+        }
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.classList.toggle('active', i === index);
+            });
+            updateProgress();
+            document.querySelector('.prev-arrow').disabled = index === 0;
+            document.querySelector('.next-arrow').disabled = index === totalSlides - 1;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        }
+
+        function goToSlide(index) {
+            currentSlide = index;
+            showSlide(currentSlide);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        createProgressDots();
+        showSlide(0);
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+    </script>
+</body>
+</html>

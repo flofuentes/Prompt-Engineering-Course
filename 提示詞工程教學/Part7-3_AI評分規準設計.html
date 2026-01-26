@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Part 7-3：AI 評分規準設計與整合</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a237e 50%, #283593 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            padding-top: 80px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .nav-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(26, 35, 126, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 10000;
+        }
+        .nav-title {
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #ce93d8, #e1bee7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .nav-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        .nav-btn-top {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        .nav-btn-top:hover {
+            background: rgba(206, 147, 216, 0.3);
+            border-color: #ce93d8;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(2px 2px at 20px 30px, white, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 90px 40px, white, transparent),
+                radial-gradient(2px 2px at 160px 120px, rgba(255,255,255,0.9), transparent),
+                radial-gradient(1px 1px at 230px 80px, white, transparent),
+                radial-gradient(2px 2px at 300px 150px, rgba(255,255,255,0.7), transparent);
+            background-size: 550px 250px;
+            animation: twinkle 8s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #ce93d8;
+            text-decoration: none;
+            font-size: 16px;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 25px;
+            transition: all 0.3s;
+        }
+
+        .back-link:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateX(-5px);
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header .part-number {
+            display: inline-block;
+            background: linear-gradient(135deg, #6a1b9a, #8e24aa);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .header h1 {
+            font-size: 42px;
+            margin-bottom: 15px;
+            text-shadow: 0 4px 20px rgba(206, 147, 216, 0.5);
+        }
+
+        .header p {
+            font-size: 20px;
+            opacity: 0.9;
+            color: #e1bee7;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            padding: 35px;
+            margin-bottom: 30px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        .content-card h2 {
+            color: #6a1b9a;
+            font-size: 26px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #8e24aa;
+        }
+
+        .content-card h3 {
+            color: #7b1fa2;
+            font-size: 20px;
+            margin: 25px 0 15px 0;
+        }
+
+        .content-card p {
+            font-size: 16px;
+            line-height: 1.8;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .prompt-box {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border-left: 5px solid #ff6f00;
+            padding: 25px;
+            border-radius: 0 15px 15px 0;
+            margin: 20px 0;
+        }
+
+        .prompt-box h4 {
+            color: #e65100;
+            font-size: 18px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .prompt-box pre {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+            font-size: 14px;
+            line-height: 1.7;
+            color: #333;
+            white-space: pre-wrap;
+        }
+
+        .code-block {
+            background: linear-gradient(135deg, #1e3a5f, #2d5a87);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        .code-block h4 {
+            color: #81d4fa;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .code-block pre {
+            color: #e0e0e0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .code-block .comment { color: #6a9955; }
+        .code-block .keyword { color: #569cd6; }
+        .code-block .string { color: #ce9178; }
+        .code-block .function { color: #dcdcaa; }
+
+        .copy-btn {
+            background: linear-gradient(135deg, #6a1b9a, #8e24aa);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+
+        .copy-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(138, 43, 226, 0.4);
+        }
+
+        .rubric-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .rubric-table th, .rubric-table td {
+            padding: 15px;
+            text-align: left;
+            border: 1px solid #e0e0e0;
+        }
+
+        .rubric-table th {
+            background: linear-gradient(135deg, #6a1b9a, #8e24aa);
+            color: white;
+            font-weight: 600;
+        }
+
+        .rubric-table tr:nth-child(even) {
+            background: #f5f5f5;
+        }
+
+        .score-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .score-4 { background: #c8e6c9; color: #2e7d32; }
+        .score-3 { background: #fff9c4; color: #f57f17; }
+        .score-2 { background: #ffccbc; color: #d84315; }
+        .score-1 { background: #ffcdd2; color: #c62828; }
+
+        .step-list {
+            list-style: none;
+            counter-reset: step;
+        }
+
+        .step-list li {
+            counter-increment: step;
+            padding: 20px;
+            padding-left: 70px;
+            margin-bottom: 15px;
+            background: #f5f5f5;
+            border-radius: 12px;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .step-list li:hover {
+            background: #e8e8e8;
+            transform: translateX(5px);
+        }
+
+        .step-list li::before {
+            content: counter(step);
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 35px;
+            height: 35px;
+            background: linear-gradient(135deg, #6a1b9a, #8e24aa);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #ede7f6, #d1c4e9);
+            border-left: 5px solid #7b1fa2;
+            padding: 20px;
+            border-radius: 0 12px 12px 0;
+            margin: 20px 0;
+        }
+
+        .highlight-box h4 {
+            color: #6a1b9a;
+            margin-bottom: 10px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .nav-btn {
+            padding: 15px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-btn.prev {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .nav-btn.next {
+            background: linear-gradient(135deg, #00c300, #00e676);
+            color: white;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 28px; }
+            .content-card { padding: 20px; }
+            .rubric-table { font-size: 14px; }
+            .rubric-table th, .rubric-table td { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <span class="nav-title">7-3 AI 評分規準設計與整合</span>
+        <div class="nav-buttons">
+            <a href="index2.html" class="nav-btn-top">首頁</a>
+            <a href="Part8-1_系統架構說明.html" class="nav-btn-top">下一章</a>
+            <button class="nav-btn-top" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="nav-btn-top">YT</a>
+            <a href="https://www.facebook.com/?locale=zh_TW" target="_blank" class="nav-btn-top">FB</a>
+            <a href="https://www.facebook.com/groups/2754139931432955?locale=zh_TW" target="_blank" class="nav-btn-top">3A</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <div class="part-number">Part 7-3</div>
+            <h1>AI 評分規準設計與整合</h1>
+            <p>Custom Rubrics & AI Integration</p>
+        </div>
+
+        <!-- 評分規準概念 -->
+        <div class="content-card">
+            <h2>AI 評分規準設計</h2>
+            <p>
+                設計清晰的評分規準（Rubric）是讓 AI 產生一致、公平評語的關鍵。好的評分規準需要具備：明確的評分面向、具體的等級描述、可衡量的標準。
+            </p>
+
+            <h3>評分規準架構</h3>
+            <table class="rubric-table">
+                <tr>
+                    <th>評分面向</th>
+                    <th><span class="score-badge score-4">優秀 (4分)</span></th>
+                    <th><span class="score-badge score-3">良好 (3分)</span></th>
+                    <th><span class="score-badge score-2">尚可 (2分)</span></th>
+                    <th><span class="score-badge score-1">待加強 (1分)</span></th>
+                </tr>
+                <tr>
+                    <td><strong>內容完整性</strong></td>
+                    <td>完整呈現所有要求內容，有額外延伸</td>
+                    <td>包含所有要求內容</td>
+                    <td>缺少部分要求內容</td>
+                    <td>內容嚴重不足</td>
+                </tr>
+                <tr>
+                    <td><strong>創意表現</strong></td>
+                    <td>展現獨特見解與創新思維</td>
+                    <td>有一定創意表現</td>
+                    <td>創意表現較少</td>
+                    <td>缺乏創意思考</td>
+                </tr>
+                <tr>
+                    <td><strong>邏輯組織</strong></td>
+                    <td>論述清晰、結構完整、邏輯嚴謹</td>
+                    <td>結構合理、邏輯通順</td>
+                    <td>結構鬆散、邏輯不清</td>
+                    <td>缺乏組織結構</td>
+                </tr>
+                <tr>
+                    <td><strong>資料運用</strong></td>
+                    <td>正確引用多元資料並深入分析</td>
+                    <td>適當引用資料佐證</td>
+                    <td>資料運用有限</td>
+                    <td>未使用資料支持</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 提示詞設計 -->
+        <div class="content-card">
+            <h2>AI 評分提示詞設計</h2>
+
+            <div class="prompt-box">
+                <h4>向 AI 請求設計評分規準</h4>
+                <pre>請幫我設計一個「學生探究報告」的 AI 自動評分規準，需求如下：
+
+1. 評分面向（4個）：
+   - 研究問題的明確性
+   - 資料蒐集與分析
+   - 論證推理能力
+   - 報告呈現品質
+
+2. 每個面向設計 4 個等級（1-4 分）
+
+3. 每個等級需包含：
+   - 具體行為描述（AI 可判斷的條件）
+   - 關鍵字詞提示
+   - 分數門檻
+
+4. 輸出格式為 JSON，方便程式解析
+
+5. 請給我完整的 GAS 函數，可以根據這個規準分析學生作品並回傳評分</pre>
+            </div>
+
+            <h3>AI 回傳的評分規準 JSON</h3>
+            <div class="code-block">
+                <h4>rubric.json - 評分規準定義</h4>
+                <pre><span class="keyword">const</span> <span class="function">RUBRIC</span> = {
+  <span class="string">"title"</span>: <span class="string">"探究報告評分規準"</span>,
+  <span class="string">"dimensions"</span>: [
+    {
+      <span class="string">"name"</span>: <span class="string">"研究問題明確性"</span>,
+      <span class="string">"weight"</span>: 0.25,
+      <span class="string">"levels"</span>: {
+        <span class="string">"4"</span>: {
+          <span class="string">"description"</span>: <span class="string">"研究問題具體明確、具創新性、可驗證"</span>,
+          <span class="string">"keywords"</span>: [<span class="string">"為什麼"</span>, <span class="string">"如何"</span>, <span class="string">"比較"</span>, <span class="string">"假設"</span>, <span class="string">"驗證"</span>],
+          <span class="string">"criteria"</span>: <span class="string">"問題聚焦且具備探究價值"</span>
+        },
+        <span class="string">"3"</span>: {
+          <span class="string">"description"</span>: <span class="string">"研究問題明確但較為普遍"</span>,
+          <span class="string">"keywords"</span>: [<span class="string">"探討"</span>, <span class="string">"了解"</span>, <span class="string">"研究"</span>],
+          <span class="string">"criteria"</span>: <span class="string">"問題可回答但缺乏獨特性"</span>
+        },
+        <span class="string">"2"</span>: {
+          <span class="string">"description"</span>: <span class="string">"研究問題模糊或範圍過大"</span>,
+          <span class="string">"keywords"</span>: [<span class="string">"知道"</span>, <span class="string">"認識"</span>],
+          <span class="string">"criteria"</span>: <span class="string">"問題不夠具體"</span>
+        },
+        <span class="string">"1"</span>: {
+          <span class="string">"description"</span>: <span class="string">"未提出明確研究問題"</span>,
+          <span class="string">"keywords"</span>: [],
+          <span class="string">"criteria"</span>: <span class="string">"缺乏研究問題"</span>
+        }
+      }
+    },
+    {
+      <span class="string">"name"</span>: <span class="string">"資料蒐集與分析"</span>,
+      <span class="string">"weight"</span>: 0.25,
+      <span class="string">"levels"</span>: {
+        <span class="string">"4"</span>: {
+          <span class="string">"description"</span>: <span class="string">"多元資料來源、深入分析、有數據佐證"</span>,
+          <span class="string">"keywords"</span>: [<span class="string">"數據"</span>, <span class="string">"統計"</span>, <span class="string">"圖表"</span>, <span class="string">"來源"</span>, <span class="string">"引用"</span>]
+        },
+        <span class="string">"3"</span>: {
+          <span class="string">"description"</span>: <span class="string">"有適當資料支持論點"</span>,
+          <span class="string">"keywords"</span>: [<span class="string">"資料"</span>, <span class="string">"參考"</span>, <span class="string">"根據"</span>]
+        },
+        <span class="string">"2"</span>: {
+          <span class="string">"description"</span>: <span class="string">"資料有限或未說明來源"</span>,
+          <span class="string">"keywords"</span>: []
+        },
+        <span class="string">"1"</span>: {
+          <span class="string">"description"</span>: <span class="string">"缺乏資料支持"</span>,
+          <span class="string">"keywords"</span>: []
+        }
+      }
+    },
+    {
+      <span class="string">"name"</span>: <span class="string">"論證推理能力"</span>,
+      <span class="string">"weight"</span>: 0.25,
+      <span class="string">"levels"</span>: {
+        <span class="string">"4"</span>: {
+          <span class="string">"description"</span>: <span class="string">"論證嚴謹、推理合理、有批判思考"</span>,
+          <span class="string">"keywords"</span>: [<span class="string">"因為"</span>, <span class="string">"所以"</span>, <span class="string">"由此可見"</span>, <span class="string">"然而"</span>, <span class="string">"但是"</span>]
+        },
+        <span class="string">"3"</span>: {
+          <span class="string">"description"</span>: <span class="string">"論證合理但深度不足"</span>,
+          <span class="string">"keywords"</span>: [<span class="string">"認為"</span>, <span class="string">"覺得"</span>]
+        },
+        <span class="string">"2"</span>: {
+          <span class="string">"description"</span>: <span class="string">"論證薄弱或有邏輯問題"</span>,
+          <span class="string">"keywords"</span>: []
+        },
+        <span class="string">"1"</span>: {
+          <span class="string">"description"</span>: <span class="string">"缺乏論證"</span>,
+          <span class="string">"keywords"</span>: []
+        }
+      }
+    },
+    {
+      <span class="string">"name"</span>: <span class="string">"報告呈現品質"</span>,
+      <span class="string">"weight"</span>: 0.25,
+      <span class="string">"levels"</span>: {
+        <span class="string">"4"</span>: {
+          <span class="string">"description"</span>: <span class="string">"結構完整、排版美觀、格式規範"</span>,
+          <span class="string">"keywords"</span>: []
+        },
+        <span class="string">"3"</span>: {
+          <span class="string">"description"</span>: <span class="string">"結構合理、格式尚可"</span>,
+          <span class="string">"keywords"</span>: []
+        },
+        <span class="string">"2"</span>: {
+          <span class="string">"description"</span>: <span class="string">"結構鬆散、格式不一致"</span>,
+          <span class="string">"keywords"</span>: []
+        },
+        <span class="string">"1"</span>: {
+          <span class="string">"description"</span>: <span class="string">"缺乏組織結構"</span>,
+          <span class="string">"keywords"</span>: []
+        }
+      }
+    }
+  ]
+};</pre>
+            </div>
+        </div>
+
+        <!-- GAS 評分函數 -->
+        <div class="content-card">
+            <h2>AI 評分函數實作</h2>
+
+            <div class="prompt-box">
+                <h4>向 AI 請求評分函數</h4>
+                <pre>請幫我寫一個 GAS 函數 evaluateWithRubric(studentWork, rubric)，功能如下：
+
+1. 輸入學生作品文字和評分規準
+2. 呼叫 Gemini API 進行評分
+3. 根據每個評分面向給出 1-4 分
+4. 計算加權總分
+5. 生成每個面向的文字評語
+6. 回傳包含分數和評語的 JSON
+
+請確保 AI 的評分有一致性和公平性。</pre>
+            </div>
+
+            <div class="code-block">
+                <h4>evaluateWithRubric.gs - AI 評分函數</h4>
+                <pre><span class="comment">// 評分規準定義</span>
+<span class="keyword">const</span> <span class="function">RUBRIC</span> = {
+  <span class="string">"title"</span>: <span class="string">"探究報告評分規準"</span>,
+  <span class="string">"dimensions"</span>: [
+    { <span class="string">"name"</span>: <span class="string">"研究問題明確性"</span>, <span class="string">"weight"</span>: 0.25 },
+    { <span class="string">"name"</span>: <span class="string">"資料蒐集與分析"</span>, <span class="string">"weight"</span>: 0.25 },
+    { <span class="string">"name"</span>: <span class="string">"論證推理能力"</span>, <span class="string">"weight"</span>: 0.25 },
+    { <span class="string">"name"</span>: <span class="string">"報告呈現品質"</span>, <span class="string">"weight"</span>: 0.25 }
+  ]
+};
+
+<span class="comment">/**
+ * 使用 AI 根據評分規準評估學生作品
+ * @param {string} studentWork - 學生作品內容
+ * @returns {Object} 評分結果
+ */</span>
+<span class="keyword">function</span> <span class="function">evaluateWithRubric</span>(studentWork) {
+  <span class="keyword">const</span> GEMINI_API_KEY = PropertiesService.getScriptProperties().getProperty(<span class="string">'GEMINI_API_KEY'</span>);
+  <span class="keyword">const</span> API_URL = <span class="string">`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`</span>;
+
+  <span class="comment">// 建構評分提示詞</span>
+  <span class="keyword">const</span> prompt = <span class="string">`你是一位專業的教育評量專家。請根據以下評分規準評估學生作品。
+
+## 評分規準
+${JSON.stringify(RUBRIC, null, 2)}
+
+## 學生作品
+${studentWork}
+
+## 評分要求
+1. 針對每個評分面向給予 1-4 分
+2. 每個面向提供 20-30 字的具體評語
+3. 評分需客觀、一致、有建設性
+
+## 回傳格式（嚴格遵守 JSON 格式）
+{
+  "scores": {
+    "研究問題明確性": { "score": 數字, "comment": "評語" },
+    "資料蒐集與分析": { "score": 數字, "comment": "評語" },
+    "論證推理能力": { "score": 數字, "comment": "評語" },
+    "報告呈現品質": { "score": 數字, "comment": "評語" }
+  },
+  "totalScore": 加權總分,
+  "overallComment": "50字整體評語",
+  "fourCharFeedback": "○○○○・○○○○"
+}`</span>;
+
+  <span class="keyword">const</span> requestBody = {
+    contents: [{
+      parts: [{ text: prompt }]
+    }],
+    generationConfig: {
+      temperature: 0.3,  <span class="comment">// 低溫度確保評分一致性</span>
+      topP: 0.8,
+      maxOutputTokens: 1024
+    }
+  };
+
+  <span class="keyword">const</span> options = {
+    method: <span class="string">'post'</span>,
+    contentType: <span class="string">'application/json'</span>,
+    payload: JSON.stringify(requestBody),
+    muteHttpExceptions: <span class="keyword">true</span>
+  };
+
+  <span class="keyword">try</span> {
+    <span class="keyword">const</span> response = UrlFetchApp.fetch(API_URL, options);
+    <span class="keyword">const</span> result = JSON.parse(response.getContentText());
+
+    <span class="keyword">if</span> (result.candidates && result.candidates[0]) {
+      <span class="keyword">const</span> text = result.candidates[0].content.parts[0].text;
+      <span class="comment">// 解析 JSON 回應</span>
+      <span class="keyword">const</span> jsonMatch = text.match(/\{[\s\S]*\}/);
+      <span class="keyword">if</span> (jsonMatch) {
+        <span class="keyword">return</span> JSON.parse(jsonMatch[0]);
+      }
+    }
+    <span class="keyword">return</span> { error: <span class="string">"無法解析 AI 回應"</span> };
+  } <span class="keyword">catch</span> (error) {
+    <span class="keyword">return</span> { error: error.toString() };
+  }
+}
+
+<span class="comment">/**
+ * 批次評分多份學生作品
+ */</span>
+<span class="keyword">function</span> <span class="function">batchEvaluate</span>() {
+  <span class="keyword">const</span> sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(<span class="string">'學生作品'</span>);
+  <span class="keyword">const</span> resultSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(<span class="string">'評分結果'</span>)
+                     || SpreadsheetApp.getActiveSpreadsheet().insertSheet(<span class="string">'評分結果'</span>);
+
+  <span class="comment">// 設定結果表頭</span>
+  resultSheet.getRange(1, 1, 1, 8).setValues([[
+    <span class="string">'學生姓名'</span>, <span class="string">'研究問題'</span>, <span class="string">'資料分析'</span>, <span class="string">'論證推理'</span>, <span class="string">'呈現品質'</span>,
+    <span class="string">'總分'</span>, <span class="string">'四字評語'</span>, <span class="string">'整體評語'</span>
+  ]]);
+
+  <span class="keyword">const</span> data = sheet.getDataRange().getValues();
+  <span class="keyword">let</span> row = 2;
+
+  <span class="keyword">for</span> (<span class="keyword">let</span> i = 1; i < data.length; i++) {
+    <span class="keyword">const</span> studentName = data[i][0];
+    <span class="keyword">const</span> work = data[i][1];
+
+    <span class="keyword">if</span> (!work) <span class="keyword">continue</span>;
+
+    <span class="keyword">const</span> result = evaluateWithRubric(work);
+
+    <span class="keyword">if</span> (!result.error) {
+      resultSheet.getRange(row, 1, 1, 8).setValues([[
+        studentName,
+        result.scores[<span class="string">'研究問題明確性'</span>].score,
+        result.scores[<span class="string">'資料蒐集與分析'</span>].score,
+        result.scores[<span class="string">'論證推理能力'</span>].score,
+        result.scores[<span class="string">'報告呈現品質'</span>].score,
+        result.totalScore,
+        result.fourCharFeedback,
+        result.overallComment
+      ]]);
+      row++;
+    }
+
+    <span class="comment">// 避免 API 限制</span>
+    Utilities.sleep(1000);
+  }
+
+  Logger.log(<span class="string">'批次評分完成！共評估 '</span> + (row - 2) + <span class="string">' 份作品'</span>);
+}
+
+<span class="comment">/**
+ * 測試單一作品評分
+ */</span>
+<span class="keyword">function</span> <span class="function">testEvaluate</span>() {
+  <span class="keyword">const</span> sampleWork = <span class="string">`
+研究主題：探討台灣海洋塑膠污染對珊瑚礁生態的影響
+
+研究問題：海洋塑膠微粒是否會影響珊瑚的白化速率？
+
+資料來源：
+1. 海洋委員會 2024 年海洋廢棄物調查報告
+2. Nature 期刊相關研究論文
+3. 實地觀察墾丁珊瑚礁區
+
+研究發現：
+根據統計數據顯示，塑膠微粒濃度較高的海域，珊瑚白化率提升約 23%。
+因為塑膠微粒會阻礙珊瑚共生藻的光合作用，所以導致珊瑚營養不足。
+然而，這項研究仍有其限制，需要更長期的觀察才能確認因果關係。
+
+結論與建議：
+減少一次性塑膠使用、加強海洋垃圾清理是保護珊瑚礁的重要措施。
+  `</span>;
+
+  <span class="keyword">const</span> result = evaluateWithRubric(sampleWork);
+  Logger.log(JSON.stringify(result, <span class="keyword">null</span>, 2));
+}</pre>
+                <button class="copy-btn" onclick="copyCode(this)">複製程式碼</button>
+            </div>
+        </div>
+
+        <!-- 整合到 Antigravity -->
+        <div class="content-card">
+            <h2>整合到 Antigravity 評量網站</h2>
+
+            <ul class="step-list">
+                <li>
+                    <strong>將評分規準儲存到 Google Sheet</strong><br>
+                    建立「評分規準」工作表，儲存各面向的評分標準
+                </li>
+                <li>
+                    <strong>設定 GAS 網頁應用程式</strong><br>
+                    部署 evaluateWithRubric 函數為 Web API
+                </li>
+                <li>
+                    <strong>在 Antigravity 中連接 API</strong><br>
+                    使用對話提示 Antigravity 呼叫評分 API
+                </li>
+                <li>
+                    <strong>顯示評分結果</strong><br>
+                    將分數和評語呈現在網頁上
+                </li>
+            </ul>
+
+            <div class="prompt-box">
+                <h4>向 Antigravity 請求整合評分功能</h4>
+                <pre>請在評量網站加入自動評分功能：
+
+1. 學生上傳作品後，呼叫以下 GAS Web API：
+   POST https://script.google.com/macros/s/你的部署ID/exec
+   Body: { "action": "evaluate", "work": "學生作品內容" }
+
+2. 接收 API 回傳的評分結果，包含：
+   - 四個面向的分數（1-4分）
+   - 加權總分
+   - 四字評語
+   - 整體評語
+
+3. 用圓餅圖或雷達圖顯示各面向分數
+
+4. 將評分結果儲存到 Google Sheet</pre>
+            </div>
+
+            <div class="highlight-box">
+                <h4>整合重點</h4>
+                <p>
+                    <strong>一致性：</strong>使用 temperature=0.3 降低 AI 回應的隨機性<br>
+                    <strong>公平性：</strong>所有作品使用相同評分規準<br>
+                    <strong>透明性：</strong>向學生展示評分規準和各面向分數<br>
+                    <strong>建設性：</strong>評語聚焦於改進建議而非批評
+                </p>
+            </div>
+        </div>
+
+        <!-- 導航按鈕 -->
+        <div class="nav-buttons">
+            <a href="Part7-2_評量網站功能設計.html" class="nav-btn prev">← 7-2 評量網站功能設計</a>
+            <a href="Part8-1_系統架構說明.html" class="nav-btn next">Part 8-1 系統架構說明 →</a>
+        </div>
+    </div>
+
+    <script>
+        function copyCode(btn) {
+            const codeBlock = btn.previousElementSibling;
+            const code = codeBlock.textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                btn.textContent = '已複製！';
+                setTimeout(() => btn.textContent = '複製程式碼', 2000);
+            });
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+    </script>
+</body>
+</html>
