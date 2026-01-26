@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>0-2 NotebookLM 實作 - AI 智慧教學實戰工作坊</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a237e 50%, #283593 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            color: #333;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image:
+                radial-gradient(2px 2px at 20px 30px, white, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 90px 40px, white, transparent),
+                radial-gradient(2px 2px at 160px 120px, rgba(255,255,255,0.9), transparent);
+            background-size: 550px 250px;
+            animation: twinkle 8s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+        }
+
+        .nav-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(26, 35, 126, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 10000;
+        }
+
+        .nav-title {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #64b5f6, #81d4fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-buttons { display: flex; gap: 12px; }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(100, 181, 246, 0.3);
+            border-color: #64b5f6;
+        }
+
+        .nav-arrow {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(26, 35, 126, 0.8);
+            color: white;
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: 2px solid rgba(100, 181, 246, 0.5);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 9000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-arrow:hover {
+            background: rgba(57, 73, 171, 0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+        .prev-arrow { left: 30px; }
+        .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .slide-container {
+            width: 100%;
+            height: 100vh;
+            padding-top: 60px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .slide {
+            position: absolute;
+            top: 60px; left: 0;
+            width: 100%;
+            height: calc(100vh - 60px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 10;
+        }
+
+        .slide.active {
+            display: flex;
+            opacity: 1;
+            z-index: 20;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.97);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            padding: 40px 50px;
+            max-width: 1350px;
+            width: 95%;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 42px;
+            margin-bottom: 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #1a237e, #0288d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        h2 {
+            color: #1a237e;
+            font-size: 30px;
+            margin-bottom: 25px;
+            border-bottom: 4px solid;
+            border-image: linear-gradient(90deg, #1a237e, #0288d1) 1;
+            padding-bottom: 12px;
+        }
+        h3 { color: #283593; font-size: 22px; margin: 20px 0 12px 0; }
+        h4 { color: #3949ab; font-size: 18px; margin: 15px 0 8px 0; }
+
+        p, li {
+            font-size: 17px;
+            line-height: 1.8;
+            color: #444;
+            margin-bottom: 10px;
+        }
+
+        ul, ol { margin-left: 25px; margin-bottom: 15px; }
+
+        code {
+            background: linear-gradient(135deg, #e8eaf6, #e1f5fe);
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-family: 'Consolas', monospace;
+            color: #1a237e;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: linear-gradient(135deg, #0c1445, #1a237e);
+            color: #b3e5fc;
+            padding: 20px 25px;
+            border-radius: 14px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-size: 14px;
+            line-height: 1.6;
+            font-family: 'Consolas', monospace;
+            border: 1px solid rgba(100, 181, 246, 0.3);
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(26, 35, 126, 0.08), rgba(2, 136, 209, 0.08));
+            border-left: 5px solid #1a237e;
+            padding: 20px 25px;
+            border-radius: 0 15px 15px 0;
+            margin: 20px 0;
+        }
+
+        .highlight-box h4 { color: #1a237e; margin-top: 0; }
+
+        .concept-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .concept-card {
+            background: linear-gradient(135deg, #e8eaf6, #e3f2fd);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .concept-card:hover {
+            border-color: #1a237e;
+            transform: translateY(-3px);
+        }
+
+        .concept-card .icon { font-size: 36px; margin-bottom: 12px; }
+        .concept-card h4 { color: #1a237e; margin: 0 0 8px 0; }
+
+        .step-box {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border-left: 4px solid #1976d2;
+        }
+
+        .step-box h4 { color: #1565c0; margin-top: 0; }
+        .step-box .step-num {
+            display: inline-block;
+            background: #1976d2;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid #ffb74d;
+        }
+
+        .feature-card .icon { font-size: 32px; margin-bottom: 10px; }
+        .feature-card h4 { color: #e65100; margin: 0 0 5px 0; font-size: 16px; }
+
+        .prompt-box {
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+            border: 2px dashed #9c27b0;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+        }
+
+        .prompt-box h4 { color: #7b1fa2; margin-top: 0; }
+
+        .practice-box {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border: 2px dashed #ff9800;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .practice-box h4 { color: #e65100; margin-top: 0; }
+
+        .slide-number {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(26, 35, 126, 0.8);
+            color: white;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 9000;
+        }
+
+        .footer-info {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .content-card { padding: 25px; }
+            h1 { font-size: 28px; }
+            h2 { font-size: 22px; }
+            .nav-arrow { width: 45px; height: 45px; font-size: 18px; }
+            .prev-arrow { left: 10px; }
+            .next-arrow { right: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <span class="nav-title">0-2 NotebookLM 實作</span>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-btn">首頁</a>
+            <a href="Part0-3_資料統整與摘要.html" class="nav-btn">下一章</a>
+            <button class="nav-btn fullscreen-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="nav-btn">YT</a>
+        </div>
+    </nav>
+
+    <button class="nav-arrow prev-arrow" onclick="prevSlide()">◀</button>
+    <button class="nav-arrow next-arrow" onclick="nextSlide()">▶</button>
+
+    <div class="slide-container">
+        <!-- Slide 1: 標題頁 -->
+        <div class="slide active">
+            <div class="content-card" style="text-align: center;">
+                <h1>NotebookLM 實作</h1>
+                <p style="font-size: 22px; color: #666; margin-bottom: 30px;">
+                    Google AI 筆記與資料統整工具
+                </p>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <div class="icon">Upload</div>
+                        <h4>上傳資料</h4>
+                        <p style="font-size: 14px;">PDF、文件、網頁、影片</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">AI</div>
+                        <h4>智慧分析</h4>
+                        <p style="font-size: 14px;">AI 自動理解與摘要</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">Create</div>
+                        <h4>多元輸出</h4>
+                        <p style="font-size: 14px;">簡報、Podcast、筆記</p>
+                    </div>
+                </div>
+                <div class="footer-info">
+                    © 2026 阿亮老師 | AI 智慧教學實戰工作坊
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: NotebookLM 簡介 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>什麼是 NotebookLM？</h2>
+
+                <div class="highlight-box">
+                    <h4>Google 的 AI 筆記工具</h4>
+                    <p>NotebookLM 是 Google 推出的 AI 驅動筆記與研究工具，可以上傳各種資料來源，讓 AI 幫你閱讀、理解、摘要，甚至生成簡報和 Podcast！</p>
+                </div>
+
+                <h3>支援的資料類型</h3>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="icon">PDF</div>
+                        <h4>PDF 文件</h4>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">Doc</div>
+                        <h4>Google 文件</h4>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">Web</div>
+                        <h4>網頁連結</h4>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">YT</div>
+                        <h4>YouTube 影片</h4>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">Txt</div>
+                        <h4>純文字檔</h4>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">Slide</div>
+                        <h4>簡報檔案</h4>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <h4>教師應用場景</h4>
+                    <p>上傳課本 PDF → AI 自動生成教學重點摘要、測驗題目、甚至備課 Podcast！</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 快速入門 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>NotebookLM 快速入門</h2>
+
+                <div class="step-box">
+                    <h4><span class="step-num">1</span>進入 NotebookLM</h4>
+                    <p>前往 <code>notebooklm.google.com</code>，使用 Google 帳號登入</p>
+                </div>
+
+                <div class="step-box">
+                    <h4><span class="step-num">2</span>建立新筆記本</h4>
+                    <p>點擊「建立新筆記本」，為你的專案命名（如：自然科教學資料）</p>
+                </div>
+
+                <div class="step-box">
+                    <h4><span class="step-num">3</span>上傳資料來源</h4>
+                    <p>點擊「新增來源」，選擇要上傳的檔案類型：</p>
+                    <ul>
+                        <li>上傳 PDF / 文件檔案</li>
+                        <li>貼上網頁連結</li>
+                        <li>貼上 YouTube 影片連結</li>
+                        <li>直接貼上文字內容</li>
+                    </ul>
+                </div>
+
+                <div class="step-box">
+                    <h4><span class="step-num">4</span>開始與 AI 對話</h4>
+                    <p>上傳完成後，你可以在右側聊天區域詢問 AI 關於這些資料的任何問題！</p>
+                </div>
+
+                <div class="highlight-box">
+                    <h4>小技巧</h4>
+                    <p>一個筆記本可以上傳多個來源，AI 會整合所有資料來回答你的問題。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: 核心功能 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>NotebookLM 核心功能</h2>
+
+                <h3>自動生成工具</h3>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <div class="icon">Summary</div>
+                        <h4>摘要生成</h4>
+                        <p style="font-size: 14px;">自動整理文件重點</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">FAQ</div>
+                        <h4>FAQ 問答</h4>
+                        <p style="font-size: 14px;">生成常見問題與解答</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">Timeline</div>
+                        <h4>時間軸</h4>
+                        <p style="font-size: 14px;">整理事件順序</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">Table</div>
+                        <h4>表格整理</h4>
+                        <p style="font-size: 14px;">比較與分類資料</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">Slides</div>
+                        <h4>簡報生成</h4>
+                        <p style="font-size: 14px;">自動製作教學簡報</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">Podcast</div>
+                        <h4>Podcast 生成</h4>
+                        <p style="font-size: 14px;">AI 雙人對談音檔</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <h4>2025-2026 最強更新：簡報生成模式</h4>
+                    <p>NotebookLM 的簡報生成功能在 2025 年大幅升級，可以根據你的提示詞自動生成各種風格的精美簡報！</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 簡報生成神級提示詞 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>簡報生成：五種神級提示詞風格</h2>
+
+                <p>以下提示詞可以讓 NotebookLM 生成不同風格的精美簡報：</p>
+
+                <div class="prompt-box">
+                    <h4>風格 1：高品質抽象背景</h4>
+                    <p style="font-size: 14px;">生成一個高品質的抽象背景簡報，使用深藍色跟金屬金色作為主色調，融入微妙的幾何箭頭紋理來增加視覺深度，添加磨砂玻璃覆蓋層營造半透明的現代感。解析度要高，確保文字跟圖像完美對齊。</p>
+                    <p><strong>適合：</strong>正式商業簡報、學術報告</p>
+                </div>
+
+                <div class="prompt-box">
+                    <h4>風格 2：黏土定格動畫風格</h4>
+                    <p style="font-size: 14px;">生成一個完整的黏土定格動畫風格簡報，讓每張圖片呈現活潑的黏土模型效果，包含色彩豐富的黏土材質、生動角色或元素，背景使用柔軟的黏土紋理，文字以手捏黏土的字體呈現。</p>
+                    <p><strong>適合：</strong>國小生、國中生、幼稚園的教學</p>
+                </div>
+
+                <div class="prompt-box">
+                    <h4>風格 3：現代日本漫畫風格</h4>
+                    <p style="font-size: 14px;">生成一個完整的漫畫風格簡報，使用白色背景黑色文字作為基底，用現代日本漫畫風格來解釋內容，生動的漫畫面板布局，對話角色用泡泡的形態呈現，動感線條與表情符號。</p>
+                    <p><strong>適合：</strong>高中大學生，增加專注度</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 更多簡報風格 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>更多簡報生成風格</h2>
+
+                <div class="prompt-box">
+                    <h4>風格 4：黑板手繪教學風格</h4>
+                    <p style="font-size: 14px;">請幫我創建一個深綠色的黑板設計的完整簡報，使用白色黃色粉紅色手寫粉筆文字。每個投影片模擬真實教室的黑板效果，包含輕微的擦拭痕跡，隨意圖案元素簡單圖示營造親切的手繪氛圍。背景紋理模仿粉筆灰塵。</p>
+                    <p><strong>適合：</strong>營造教室氛圍、輕鬆教育化風格</p>
+                </div>
+
+                <div class="prompt-box">
+                    <h4>風格 5：像素復古遊戲風格</h4>
+                    <p style="font-size: 14px;">建立一個像素復古藝術遊戲風格簡報，使用 8 位元色調比如紅色藍色綠色方塊。每張圖片要模擬老派電玩畫面，包含像素畫角色、磚塊背景紋理、遊戲圖示、金幣跳躍人物。文字使用像素字體加入邊框效果，還有遊戲邊界、分數欄，營造懷舊且趣味的氛圍。</p>
+                    <p><strong>適合：</strong>資訊科技課程、遊戲化學習</p>
+                </div>
+
+                <div class="highlight-box">
+                    <h4>選擇適合受眾的風格</h4>
+                    <p>根據不同的溝通對象，設計出他們會感興趣的風格。國小生用黏土風、高中生用漫畫風、正式場合用抽象專業風。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Podcast 生成 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>AI Podcast 生成功能</h2>
+
+                <div class="highlight-box">
+                    <h4>最酷的功能：Audio Overview</h4>
+                    <p>NotebookLM 可以根據你上傳的資料，自動生成一段 AI 雙人對談的 Podcast 音檔！兩位 AI 主持人會討論你的資料內容，非常適合製作「聽」的學習教材。</p>
+                </div>
+
+                <h3>使用步驟</h3>
+                <div class="step-box">
+                    <h4><span class="step-num">1</span>上傳資料來源</h4>
+                    <p>準備好你想要製作成 Podcast 的教學資料</p>
+                </div>
+                <div class="step-box">
+                    <h4><span class="step-num">2</span>選擇 Audio Overview</h4>
+                    <p>在右側工具列找到「Audio Overview」或「產生音訊」功能</p>
+                </div>
+                <div class="step-box">
+                    <h4><span class="step-num">3</span>等待生成</h4>
+                    <p>AI 會花幾分鐘生成約 10-15 分鐘的對談音檔</p>
+                </div>
+                <div class="step-box">
+                    <h4><span class="step-num">4</span>下載或分享</h4>
+                    <p>可以下載 MP3 檔案，分享給學生作為預習或複習教材</p>
+                </div>
+
+                <div class="concept-grid" style="margin-top: 20px;">
+                    <div class="concept-card">
+                        <div class="icon">Listen</div>
+                        <h4>翻轉教學</h4>
+                        <p style="font-size: 14px;">讓學生在家「聽」預習教材</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">Review</div>
+                        <h4>複習工具</h4>
+                        <p style="font-size: 14px;">通勤路上也能複習課程內容</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: 實作練習 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>實作練習：NotebookLM 體驗</h2>
+
+                <div class="practice-box">
+                    <h4>練習 1：建立你的第一個筆記本</h4>
+                    <ol>
+                        <li>前往 <code>notebooklm.google.com</code></li>
+                        <li>建立新筆記本，命名為「我的教學資料庫」</li>
+                        <li>上傳一份你手邊的教學 PDF 或貼上一個教育相關網頁連結</li>
+                        <li>請 AI 幫你「生成這份資料的重點摘要」</li>
+                    </ol>
+                </div>
+
+                <div class="practice-box">
+                    <h4>練習 2：嘗試簡報生成</h4>
+                    <ol>
+                        <li>上傳一份報告或研究文件</li>
+                        <li>使用「黏土定格動畫風格」提示詞生成簡報</li>
+                        <li>觀察 AI 生成的結果，評估是否適合你的教學對象</li>
+                    </ol>
+                </div>
+
+                <div class="practice-box">
+                    <h4>練習 3：生成教學 Podcast（進階）</h4>
+                    <ol>
+                        <li>上傳一個單元的教學內容</li>
+                        <li>使用 Audio Overview 功能生成 Podcast</li>
+                        <li>聽聽看 AI 雙人對談是否正確理解了你的教材</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: 總結 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>本節重點回顧</h2>
+
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <div class="icon">1</div>
+                        <h4>多元來源</h4>
+                        <p style="font-size: 14px;">NotebookLM 支援 PDF、網頁、YouTube、文件等多種資料類型</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">2</div>
+                        <h4>智慧生成</h4>
+                        <p style="font-size: 14px;">自動摘要、FAQ、時間軸、表格等多種輸出格式</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">3</div>
+                        <h4>風格簡報</h4>
+                        <p style="font-size: 14px;">使用提示詞生成不同風格的精美簡報</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">4</div>
+                        <h4>AI Podcast</h4>
+                        <p style="font-size: 14px;">自動生成雙人對談音檔，適合翻轉教學</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box" style="margin-top: 30px;">
+                    <h4>下一節預告</h4>
+                    <p>在 0-3 節中，我們將學習<strong>資料統整與摘要技巧</strong>，包括如何有效組織搜集到的資料、建立知識庫，以及運用 AI 輔助進行資料分析與報告撰寫。</p>
+                </div>
+
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="Part0-3_資料統整與摘要.html" class="nav-btn" style="display: inline-block; background: linear-gradient(135deg, #1a237e, #0288d1); border: none; padding: 15px 40px; font-size: 18px;">
+                        前往下一節 →
+                    </a>
+                </div>
+
+                <div class="footer-info">
+                    © 2026 阿亮老師 | AI 智慧教學實戰工作坊
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide-number">
+        <span id="currentSlide">1</span> / <span id="totalSlides">9</span>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        document.getElementById('totalSlides').textContent = totalSlides;
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.classList.remove('active');
+                if (i === index) {
+                    slide.classList.add('active');
+                }
+            });
+            document.getElementById('currentSlide').textContent = index + 1;
+            document.querySelector('.prev-arrow').disabled = index === 0;
+            document.querySelector('.next-arrow').disabled = index === totalSlides - 1;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+
+        showSlide(0);
+
+        function toggleFullscreen() {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                btn.textContent = '離開全螢幕';
+            } else {
+                document.exitFullscreen();
+                btn.textContent = '全螢幕';
+            }
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) {
+                btn.textContent = '全螢幕';
+            }
+        });
+    </script>
+</body>
+</html>

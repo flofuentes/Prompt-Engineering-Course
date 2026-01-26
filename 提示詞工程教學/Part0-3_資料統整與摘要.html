@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>0-3 資料統整與摘要 - AI 智慧教學實戰工作坊</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a237e 50%, #283593 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            color: #333;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image:
+                radial-gradient(2px 2px at 20px 30px, white, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 90px 40px, white, transparent),
+                radial-gradient(2px 2px at 160px 120px, rgba(255,255,255,0.9), transparent);
+            background-size: 550px 250px;
+            animation: twinkle 8s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+        }
+
+        .nav-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(26, 35, 126, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 10000;
+        }
+
+        .nav-title {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #64b5f6, #81d4fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-buttons { display: flex; gap: 12px; }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(100, 181, 246, 0.3);
+            border-color: #64b5f6;
+        }
+
+        .nav-arrow {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(26, 35, 126, 0.8);
+            color: white;
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: 2px solid rgba(100, 181, 246, 0.5);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 9000;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-arrow:hover {
+            background: rgba(57, 73, 171, 0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+        .prev-arrow { left: 30px; }
+        .next-arrow { right: 30px; }
+        .nav-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .slide-container {
+            width: 100%;
+            height: 100vh;
+            padding-top: 60px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .slide {
+            position: absolute;
+            top: 60px; left: 0;
+            width: 100%;
+            height: calc(100vh - 60px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 10;
+        }
+
+        .slide.active {
+            display: flex;
+            opacity: 1;
+            z-index: 20;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.97);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            padding: 40px 50px;
+            max-width: 1350px;
+            width: 95%;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 42px;
+            margin-bottom: 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #1a237e, #0288d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        h2 {
+            color: #1a237e;
+            font-size: 30px;
+            margin-bottom: 25px;
+            border-bottom: 4px solid;
+            border-image: linear-gradient(90deg, #1a237e, #0288d1) 1;
+            padding-bottom: 12px;
+        }
+        h3 { color: #283593; font-size: 22px; margin: 20px 0 12px 0; }
+        h4 { color: #3949ab; font-size: 18px; margin: 15px 0 8px 0; }
+
+        p, li {
+            font-size: 17px;
+            line-height: 1.8;
+            color: #444;
+            margin-bottom: 10px;
+        }
+
+        ul, ol { margin-left: 25px; margin-bottom: 15px; }
+
+        code {
+            background: linear-gradient(135deg, #e8eaf6, #e1f5fe);
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-family: 'Consolas', monospace;
+            color: #1a237e;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: linear-gradient(135deg, #0c1445, #1a237e);
+            color: #b3e5fc;
+            padding: 20px 25px;
+            border-radius: 14px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-size: 14px;
+            line-height: 1.6;
+            font-family: 'Consolas', monospace;
+            border: 1px solid rgba(100, 181, 246, 0.3);
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(26, 35, 126, 0.08), rgba(2, 136, 209, 0.08));
+            border-left: 5px solid #1a237e;
+            padding: 20px 25px;
+            border-radius: 0 15px 15px 0;
+            margin: 20px 0;
+        }
+
+        .highlight-box h4 { color: #1a237e; margin-top: 0; }
+
+        .concept-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .concept-card {
+            background: linear-gradient(135deg, #e8eaf6, #e3f2fd);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .concept-card:hover {
+            border-color: #1a237e;
+            transform: translateY(-3px);
+        }
+
+        .concept-card .icon { font-size: 36px; margin-bottom: 12px; }
+        .concept-card h4 { color: #1a237e; margin: 0 0 8px 0; }
+
+        .method-box {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border-left: 4px solid #4caf50;
+        }
+
+        .method-box h4 { color: #2e7d32; margin-top: 0; }
+
+        .tool-card {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 10px 0;
+            border-left: 4px solid #1976d2;
+        }
+
+        .tool-card h4 { color: #1565c0; margin-top: 0; }
+
+        .practice-box {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border: 2px dashed #ff9800;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .practice-box h4 { color: #e65100; margin-top: 0; }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .comparison-box {
+            padding: 20px;
+            border-radius: 15px;
+        }
+
+        .comparison-box.before {
+            background: linear-gradient(135deg, #ffebee, #fce4ec);
+            border-left: 4px solid #c62828;
+        }
+
+        .comparison-box.after {
+            background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+            border-left: 4px solid #2e7d32;
+        }
+
+        .comparison-box h4 { margin-top: 0; }
+        .comparison-box.before h4 { color: #c62828; }
+        .comparison-box.after h4 { color: #2e7d32; }
+
+        .slide-number {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(26, 35, 126, 0.8);
+            color: white;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 9000;
+        }
+
+        .footer-info {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .next-unit-link {
+            display: inline-block;
+            background: linear-gradient(135deg, #1a237e, #0288d1);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+
+        .next-unit-link:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(26, 35, 126, 0.4);
+        }
+
+        .social-link {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+
+        .social-link:hover {
+            background: rgba(100, 181, 246, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .content-card { padding: 25px; }
+            h1 { font-size: 28px; }
+            h2 { font-size: 22px; }
+            .comparison-grid { grid-template-columns: 1fr; }
+            .nav-arrow { width: 45px; height: 45px; font-size: 18px; }
+            .prev-arrow { left: 10px; }
+            .next-arrow { right: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <span class="nav-title">0-3 資料統整與摘要</span>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-btn">首頁</a>
+            <a href="Part1-1_提示詞基本概念.html" class="nav-btn">Part 1 →</a>
+            <button class="nav-btn fullscreen-btn" onclick="toggleFullscreen()">全螢幕</button>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="nav-btn">YT</a>
+            <a href="https://www.facebook.com/?locale=zh_TW" target="_blank" class="nav-btn">FB</a>
+            <a href="https://www.facebook.com/groups/2754139931432955?locale=zh_TW" target="_blank" class="nav-btn">3A</a>
+        </div>
+    </nav>
+
+    <button class="nav-arrow prev-arrow" onclick="prevSlide()">◀</button>
+    <button class="nav-arrow next-arrow" onclick="nextSlide()">▶</button>
+
+    <div class="slide-container">
+        <!-- Slide 1: 標題頁 -->
+        <div class="slide active">
+            <div class="content-card" style="text-align: center;">
+                <h1>資料統整與摘要</h1>
+                <p style="font-size: 22px; color: #666; margin-bottom: 30px;">
+                    Data Organization & Summarization
+                </p>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <div class="icon">Organize</div>
+                        <h4>組織架構</h4>
+                        <p style="font-size: 14px;">建立清晰的知識體系</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">Summary</div>
+                        <h4>重點摘要</h4>
+                        <p style="font-size: 14px;">提取關鍵資訊</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">Output</div>
+                        <h4>知識輸出</h4>
+                        <p style="font-size: 14px;">轉化為教學素材</p>
+                    </div>
+                </div>
+                <div class="footer-info">
+                    © 2026 阿亮老師 | AI 智慧教學實戰工作坊
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: 為什麼需要資料統整 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>為什麼需要資料統整？</h2>
+
+                <div class="highlight-box">
+                    <h4>從資訊到知識</h4>
+                    <p>搜集到的資料只是「原料」，需要經過統整、分析、組織才能變成有用的「知識」，進而轉化為有效的「教學內容」。</p>
+                </div>
+
+                <h3>資料統整的價值</h3>
+                <div class="comparison-grid">
+                    <div class="comparison-box before">
+                        <h4>未經統整</h4>
+                        <ul style="margin-left: 15px;">
+                            <li>資料散落各處</li>
+                            <li>重複收集相同資訊</li>
+                            <li>找不到需要的內容</li>
+                            <li>難以建立知識連結</li>
+                        </ul>
+                    </div>
+                    <div class="comparison-box after">
+                        <h4>經過統整</h4>
+                        <ul style="margin-left: 15px;">
+                            <li>資料系統化存放</li>
+                            <li>快速取用相關資源</li>
+                            <li>知識脈絡清晰</li>
+                            <li>方便擴充與更新</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="concept-grid" style="margin-top: 20px;">
+                    <div class="concept-card">
+                        <div class="icon">3x</div>
+                        <h4>效率提升</h4>
+                        <p style="font-size: 14px;">良好的統整可讓備課效率提升 3 倍</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">Reuse</div>
+                        <h4>資源複用</h4>
+                        <p style="font-size: 14px;">統整過的資料可重複使用於不同課程</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: 資料統整方法 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>資料統整方法論</h2>
+
+                <h3>常用統整框架</h3>
+
+                <div class="method-box">
+                    <h4>主題分類法</h4>
+                    <p>依據教學主題建立資料夾結構，例如：</p>
+                    <pre style="background: #fff; color: #333; border: 1px solid #ddd;">
+自然科學
+├── 太空探測
+│   ├── 火星任務
+│   ├── 衛星科技
+│   └── 太空人訓練
+├── 海洋生態
+│   ├── 珊瑚礁
+│   ├── 深海生物
+│   └── 海洋保育
+└── 氣候變遷
+                    </pre>
+                </div>
+
+                <div class="method-box">
+                    <h4>5W1H 框架</h4>
+                    <p>針對每個主題整理以下資訊：</p>
+                    <ul>
+                        <li><strong>What</strong>：這是什麼？核心定義</li>
+                        <li><strong>Why</strong>：為什麼重要？意義價值</li>
+                        <li><strong>Who</strong>：相關人物或對象</li>
+                        <li><strong>When</strong>：時間脈絡</li>
+                        <li><strong>Where</strong>：地點或應用場景</li>
+                        <li><strong>How</strong>：如何運作？方法步驟</li>
+                    </ul>
+                </div>
+
+                <div class="method-box">
+                    <h4>心智圖法</h4>
+                    <p>從核心概念向外延伸，建立概念關聯圖。適合用於主題發想與概念連結。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: AI 輔助統整 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>AI 輔助資料統整</h2>
+
+                <div class="highlight-box">
+                    <h4>讓 AI 成為你的研究助理</h4>
+                    <p>善用 AI 工具可以大幅加速資料整理、分類、摘要的過程。</p>
+                </div>
+
+                <h3>實用 AI 統整提示詞</h3>
+
+                <div class="tool-card">
+                    <h4>資料分類</h4>
+                    <p><code>請將以下資料按照「概念定義」「應用案例」「研究數據」三個類別進行分類：[貼上資料]</code></p>
+                </div>
+
+                <div class="tool-card">
+                    <h4>重點摘要</h4>
+                    <p><code>請閱讀以下文章，列出 5 個最重要的觀點，每個觀點用一句話說明：[貼上文章]</code></p>
+                </div>
+
+                <div class="tool-card">
+                    <h4>比較分析</h4>
+                    <p><code>請比較 A 和 B 兩個概念，用表格呈現它們的相同點與相異點</code></p>
+                </div>
+
+                <div class="tool-card">
+                    <h4>知識連結</h4>
+                    <p><code>這份資料與「[已知概念]」有什麼關聯？請說明它們的連結</code></p>
+                </div>
+
+                <div class="tool-card">
+                    <h4>教學轉化</h4>
+                    <p><code>請將這份專業資料轉化為國中生能理解的版本，保留核心概念但使用簡單用詞</code></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: 摘要技巧 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>有效摘要的技巧</h2>
+
+                <h3>好摘要的特徵</h3>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <div class="icon">Core</div>
+                        <h4>抓住核心</h4>
+                        <p style="font-size: 14px;">保留最重要的 20% 資訊</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">Structure</div>
+                        <h4>結構清晰</h4>
+                        <p style="font-size: 14px;">有邏輯的組織呈現</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">Own</div>
+                        <h4>自己的話</h4>
+                        <p style="font-size: 14px;">用自己理解的方式重述</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">Action</div>
+                        <h4>可行動</h4>
+                        <p style="font-size: 14px;">摘要後能立即運用</p>
+                    </div>
+                </div>
+
+                <h3>分層摘要法</h3>
+                <div class="method-box">
+                    <h4>三層結構</h4>
+                    <ul>
+                        <li><strong>第一層：一句話摘要</strong> — 這份資料在說什麼？（25 字內）</li>
+                        <li><strong>第二層：重點條列</strong> — 3-5 個關鍵要點</li>
+                        <li><strong>第三層：詳細筆記</strong> — 重要細節、案例、數據</li>
+                    </ul>
+                </div>
+
+                <div class="highlight-box">
+                    <h4>教師實用技巧</h4>
+                    <p>在摘要時同時標註「可用於教學的點」，例如：「這個案例可以用在引起動機」「這個數據適合做成圖表」。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: 建立個人知識庫 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>建立個人知識庫</h2>
+
+                <div class="highlight-box">
+                    <h4>累積式學習</h4>
+                    <p>建立一個持續擴充的知識庫，讓每次的搜集和整理都能累積成為可重複使用的資產。</p>
+                </div>
+
+                <h3>推薦工具</h3>
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <div class="icon">NLM</div>
+                        <h4>NotebookLM</h4>
+                        <p style="font-size: 14px;">AI 驅動的筆記工具，自動整合與問答</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">Notion</div>
+                        <h4>Notion</h4>
+                        <p style="font-size: 14px;">靈活的頁面與資料庫系統</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">Obsidian</div>
+                        <h4>Obsidian</h4>
+                        <p style="font-size: 14px;">雙向連結筆記，建立知識網絡</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">Drive</div>
+                        <h4>Google Drive</h4>
+                        <p style="font-size: 14px;">雲端存取，方便協作分享</p>
+                    </div>
+                </div>
+
+                <h3>知識庫建構建議</h3>
+                <ul>
+                    <li><strong>固定命名規則</strong>：日期_主題_類型（如：20260126_太陽系_教案）</li>
+                    <li><strong>標籤系統</strong>：為資料加上標籤，方便跨主題搜尋</li>
+                    <li><strong>定期回顧</strong>：每月整理一次，淘汰過時資料</li>
+                    <li><strong>與同事分享</strong>：建立共享知識庫，互利互惠</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 7: 實作練習 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>實作練習：資料統整實戰</h2>
+
+                <div class="practice-box">
+                    <h4>練習 1：主題分類</h4>
+                    <p>為你即將教授的一個單元，建立資料夾結構：</p>
+                    <ol>
+                        <li>確定主題（如：海洋生態）</li>
+                        <li>列出 3-5 個子主題</li>
+                        <li>在電腦或雲端建立對應的資料夾</li>
+                        <li>將現有資料歸檔到對應位置</li>
+                    </ol>
+                </div>
+
+                <div class="practice-box">
+                    <h4>練習 2：AI 輔助摘要</h4>
+                    <ol>
+                        <li>找一篇與你教學相關的文章或報告</li>
+                        <li>使用 ChatGPT 或 Claude 請 AI「用三層摘要法整理這份資料」</li>
+                        <li>檢視 AI 的摘要，補充你認為遺漏的重點</li>
+                        <li>標註可用於教學的素材點</li>
+                    </ol>
+                </div>
+
+                <div class="practice-box">
+                    <h4>練習 3：NotebookLM 知識庫</h4>
+                    <ol>
+                        <li>在 NotebookLM 建立一個教學主題的筆記本</li>
+                        <li>上傳至少 3 個相關的資料來源</li>
+                        <li>請 AI 生成「這個主題的教學大綱建議」</li>
+                        <li>匯出結果作為備課參考</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Part 0 總結 -->
+        <div class="slide">
+            <div class="content-card">
+                <h2>Part 0 總結：資料查找與統整</h2>
+
+                <div class="concept-grid">
+                    <div class="concept-card">
+                        <div class="icon">0-1</div>
+                        <h4>資料搜尋技巧</h4>
+                        <p style="font-size: 14px;">進階搜尋運算子、學術資源、AI 搜尋工具、CRAAP 驗證法</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">0-2</div>
+                        <h4>NotebookLM 實作</h4>
+                        <p style="font-size: 14px;">上傳資料、AI 問答、簡報生成、Podcast 製作</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="icon">0-3</div>
+                        <h4>資料統整與摘要</h4>
+                        <p style="font-size: 14px;">統整方法論、AI 輔助摘要、建立知識庫</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box" style="margin-top: 30px;">
+                    <h4>核心能力養成</h4>
+                    <p>掌握這些技能後，你將能夠：<br>
+                    ✓ 快速找到高品質的教學資源<br>
+                    ✓ 運用 AI 工具高效整理資料<br>
+                    ✓ 建立可持續累積的個人知識庫<br>
+                    ✓ 為後續的提示詞工程打下堅實基礎</p>
+                </div>
+
+                <div style="text-align: center; margin-top: 30px;">
+                    <p style="font-size: 18px; color: #1a237e; margin-bottom: 20px;">準備好進入提示詞工程的世界了嗎？</p>
+                    <a href="Part1-1_提示詞基本概念.html" class="next-unit-link">
+                        前往 Part 1：提示詞工程基礎 →
+                    </a>
+                </div>
+
+                <div style="text-align: center; margin-top: 30px; padding: 20px; background: rgba(26, 35, 126, 0.05); border-radius: 15px;">
+                    <p style="color: #666; margin-bottom: 15px;">加入社群，與更多教師交流：</p>
+                    <a href="https://www.facebook.com/?locale=zh_TW" target="_blank" class="social-link" style="background: #1877f2; border-color: #1877f2;">Facebook</a>
+                    <a href="https://www.facebook.com/groups/2754139931432955?locale=zh_TW" target="_blank" class="social-link" style="background: #4267b2; border-color: #4267b2;">3A 教師社團</a>
+                    <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="social-link" style="background: #ff0000; border-color: #ff0000;">YouTube</a>
+                </div>
+
+                <div class="footer-info">
+                    © 2026 阿亮老師 | AI 智慧教學實戰工作坊
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide-number">
+        <span id="currentSlide">1</span> / <span id="totalSlides">8</span>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        document.getElementById('totalSlides').textContent = totalSlides;
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.classList.remove('active');
+                if (i === index) {
+                    slide.classList.add('active');
+                }
+            });
+            document.getElementById('currentSlide').textContent = index + 1;
+            document.querySelector('.prev-arrow').disabled = index === 0;
+            document.querySelector('.next-arrow').disabled = index === totalSlides - 1;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+
+        showSlide(0);
+
+        function toggleFullscreen() {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                btn.textContent = '離開全螢幕';
+            } else {
+                document.exitFullscreen();
+                btn.textContent = '全螢幕';
+            }
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.querySelector('.fullscreen-btn');
+            if (!document.fullscreenElement) {
+                btn.textContent = '全螢幕';
+            }
+        });
+    </script>
+</body>
+</html>

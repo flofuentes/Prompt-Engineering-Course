@@ -1,0 +1,619 @@
+參考1:
+
+// ============================================
+// 自主學習評語機器人 - Google Apps Script
+// ============================================
+
+// 設定常數（請替換為你自己的 API Keys）
+const LINE_CHANNEL_ACCESS_TOKEN = '你的_LINE_CHANNEL_ACCESS_TOKEN';
+const OPENAI_API_KEY = '你的_OPENAI_API_KEY';
+const GEMINI_API_KEY = '你的_GEMINI_API_KEY';
+const GOOGLE_DRIVE_FOLDER_ID = '你的_GOOGLE_DRIVE_FOLDER_ID';
+const SPREADSHEET_ID = '你的_SPREADSHEET_ID';
+
+// 使用者狀態存儲（使用 Script Properties）
+const userProperties = PropertiesService.getScriptProperties();
+
+// ============================================
+// 主要入口點 - 接收 LINE Webhook
+// ============================================
+function doPost(e) {
+  try {
+    const json = JSON.parse(e.postData.contents);
+    const events = json.events;
+
+    for (let i = 0; i < events.length; i++) {
+      handleEvent(events[i]);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    console.error('doPost Error:', error);
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: error.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// ============================================
+// 事件處理
+// ============================================
+function handleEvent(event) {
+  const userId = event.source.userId;
+  const replyToken = event.replyToken;
+
+  // 處理追蹤事件（加入好友）
+  if (event.type === 'follow') {
+    const welcomeMessage = '👋 歡迎使用「自主學習評語機器人」！\n\n' +
+      '📝 使用方式：\n' +
+      '輸入「幫我評語」即可開始\n\n' +
+      '我會根據你的自主學習成果給予正向的評語和建議！';
+    replyMessage(replyToken, welcomeMessage);
+    return;
+  }
+
+  // 處理文字訊息
+  if (event.type === 'message' && event.message.type === 'text') {
+    const userMessage = event.message.text.trim();
+
+    if (userMessage === '幫我評語') {
+      // 設定使用者狀態為等待上傳檔案
+      setUserState(userId, 'waiting_for_file');
+
+      const promptMessage = '📄 我是阿亮老師，現在請上傳你的自主學習成果 PDF 檔案\n\n' +
+        '⚠️ 注意事項：\n' +
+        '• 檔案格式：僅支援 PDF\n' +
+        '• 檔案大小：建議 10MB 以內\n' +
+        '• LINE 最大限制：300MB\n\n' +
+        '💡 檔案太大怎麼辦？\n' +
+        '可以先到 I Love PDF 網站壓縮：\n' +
+        'https://www.ilovepdf.com/zh-tw/compress_pdf\n\n' +
+        '上傳後，我會仔細閱讀並給你個人專屬的評語！';
+      replyMessage(replyToken, promptMessage);
+      return;
+    }
+
+    // 其他文字訊息
+    const helpMessage = '🤖 我是自主學習評語機器人\n\n' +
+      '請輸入「幫我評語」開始使用！';
+    replyMessage(replyToken, helpMessage);
+    return;
+  }
+
+  // 處理檔案訊息
+  if (event.type === 'message' && event.message.type === 'file') {
+    const userState = getUserState(userId);
+
+    if (userState !== 'waiting_for_file') {
+      replyMessage(replyToken, '請先輸入「幫我評語」，再上傳檔案喔！');
+      return;
+    }
+
+    const fileName = event.message.fileName;
+    const messageId = event.message.id;
+
+    // 檢查是否為 PDF
+    if (!fileName.toLowerCase().endsWith('.pdf')) {
+      replyMessage(replyToken, '⚠️ 請上傳 PDF 格式的檔案！\n\n目前僅支援 PDF 檔案格式。');
+      return;
+    }
+
+    // 先回覆處理中訊息
+    replyMessage(replyToken, '⏳ 正在處理你的檔案，請稍候...\n\n這可能需要 30 秒到 1 分鐘的時間。');
+
+    // 清除使用者狀態
+    clearUserState(userId);
+
+    // 非同步處理檔案（使用 push message）
+    processFileAsync(userId, messageId, fileName);
+    return;
+  }
+}
+
+// ============================================
+// 非同步處理檔案
+// ============================================
+function processFileAsync(userId, messageId, fileName) {
+  try {
+    // 1. 從 LINE 下載檔案
+    const fileBlob = downloadFileFromLine(messageId);
+
+    // 2. 儲存到 Google Drive
+    const file = saveFileToDrive(fileBlob, fileName, userId);
+
+    // 3. 提取 PDF 文字內容
+    const pdfText = extractTextFromPdf(file);
+
+    if (!pdfText || pdfText.trim().length < 10) {
+      pushMessage(userId, '⚠️ 無法讀取 PDF 內容，可能是掃描檔或圖片型 PDF。\n\n請確保 PDF 內含可選取的文字，或嘗試上傳其他檔案。');
+      return;
+    }
+
+    // 4. 呼叫 OpenAI 生成評語
+    const feedback = generateFeedback(pdfText);
+
+    // 5. 記錄到試算表
+    logToSpreadsheet(userId, fileName, feedback);
+
+    // 6. 回傳評語給學生
+    const responseMessage = '✨ 你的自主學習評語 ✨\n\n' + feedback + '\n\n' +
+      '---\n📌 繼續加油！有新的學習成果歡迎再次分享！';
+    pushMessage(userId, responseMessage);
+
+  } catch (error) {
+    console.error('processFileAsync Error:', error);
+    pushMessage(userId, '❌ 處理檔案時發生錯誤：' + error.message + '\n\n請稍後再試，或聯繫管理員。');
+  }
+}
+
+// ============================================
+// LINE API 相關函式
+// ============================================
+
+// 從 LINE 下載檔案
+function downloadFileFromLine(messageId) {
+  const url = 'https://api-data.line.me/v2/bot/message/' + messageId + '/content';
+  const options = {
+    method: 'get',
+    headers: {
+      'Authorization': 'Bearer ' + LINE_CHANNEL_ACCESS_TOKEN
+    },
+    muteHttpExceptions: true
+  };
+
+  const response = UrlFetchApp.fetch(url, options);
+
+  if (response.getResponseCode() !== 200) {
+    throw new Error('無法下載檔案：' + response.getContentText());
+  }
+
+  return response.getBlob();
+}
+
+// 回覆訊息
+function replyMessage(replyToken, message) {
+  const url = 'https://api.line.me/v2/bot/message/reply';
+  const payload = {
+    replyToken: replyToken,
+    messages: [{
+      type: 'text',
+      text: message
+    }]
+  };
+
+  const options = {
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + LINE_CHANNEL_ACCESS_TOKEN
+    },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  UrlFetchApp.fetch(url, options);
+}
+
+// 主動推送訊息
+function pushMessage(userId, message) {
+  const url = 'https://api.line.me/v2/bot/message/push';
+  const payload = {
+    to: userId,
+    messages: [{
+      type: 'text',
+      text: message
+    }]
+  };
+
+  const options = {
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + LINE_CHANNEL_ACCESS_TOKEN
+    },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  UrlFetchApp.fetch(url, options);
+}
+
+// ============================================
+// Google Drive 相關函式
+// ============================================
+
+// 儲存檔案到 Google Drive
+function saveFileToDrive(blob, fileName, userId) {
+  const folder = DriveApp.getFolderById(GOOGLE_DRIVE_FOLDER_ID);
+
+  // 加上時間戳和用戶ID避免重複
+  const timestamp = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyyMMdd_HHmmss');
+  const newFileName = timestamp + '_' + userId.substring(0, 8) + '_' + fileName;
+
+  blob.setName(newFileName);
+  const file = folder.createFile(blob);
+
+  return file;
+}
+
+// 提取 PDF 文字內容
+function extractTextFromPdf(file) {
+  try {
+    const blob = file.getBlob();
+    const fileName = 'temp_pdf_' + new Date().getTime();
+
+    // 使用 Drive API 將 PDF 轉換為 Google Docs（不使用 OCR，避免限制）
+    const resource = {
+      title: fileName,
+      mimeType: 'application/vnd.google-apps.document'
+    };
+
+    // 直接轉換 PDF 為 Google Docs
+    const docFile = Drive.Files.insert(resource, blob, {
+      convert: true
+    });
+
+    // 取得轉換後的文字內容
+    const doc = DocumentApp.openById(docFile.id);
+    const text = doc.getBody().getText();
+
+    // 刪除暫存檔案
+    DriveApp.getFileById(docFile.id).setTrashed(true);
+
+    console.log('PDF 提取成功，文字長度：' + text.length);
+    return text;
+
+  } catch (error) {
+    console.error('PDF 轉換失敗：' + error.message);
+    return '';
+  }
+}
+
+// ============================================
+// OpenAI API 相關函式
+// ============================================
+
+function generateFeedback(pdfContent) {
+  const url = 'https://api.openai.com/v1/chat/completions';
+
+  // 模型優先順序：先用 gpt-5.1，失敗則用 gpt-4.1
+  const models = ['gpt-5.1', 'gpt-4.1'];
+
+  // 截取內容（避免超過 token 限制）
+  const maxLength = 8000;
+  const truncatedContent = pdfContent.length > maxLength
+    ? pdfContent.substring(0, maxLength) + '...(內容已截取)'
+    : pdfContent;
+
+  const systemPrompt = `你是一位溫暖且專業的教育評語專家。你的任務是根據學生的自主學習成果，給予正向、鼓勵性的評語。
+
+評語要求：
+1. 字數：100-150字
+2. 語氣：溫暖、正向、鼓勵
+3. 內容結構：
+   - 肯定學生的努力和亮點
+   - 指出具體的優點或進步
+   - 給予未來學習的建議
+4. 使用繁體中文
+5. 避免使用過於制式化的語句`;
+
+  const userPrompt = `請根據以下學生的自主學習成果，撰寫一段評語：
+
+===學生作品內容===
+${truncatedContent}
+==================
+
+請給予 100-150 字的正向評語，包含肯定、鼓勵和未來建議。`;
+
+  // 嘗試每個模型
+  for (let i = 0; i < models.length; i++) {
+    const currentModel = models[i];
+    console.log('嘗試使用模型：' + currentModel);
+
+    const payload = {
+      model: currentModel,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      max_tokens: 500,
+      temperature: 0.7
+    };
+
+    const options = {
+      method: 'post',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + OPENAI_API_KEY
+      },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+
+    const response = UrlFetchApp.fetch(url, options);
+    const result = JSON.parse(response.getContentText());
+
+    // 如果成功，回傳結果
+    if (!result.error) {
+      console.log('成功使用模型：' + currentModel);
+      return result.choices[0].message.content.trim();
+    }
+
+    // 如果失敗且還有下一個模型可用，繼續嘗試
+    console.log('模型 ' + currentModel + ' 失敗：' + result.error.message);
+
+    // 如果是最後一個模型也失敗，拋出錯誤
+    if (i === models.length - 1) {
+      throw new Error('所有模型都失敗：' + result.error.message);
+    }
+  }
+}
+
+// ============================================
+// Google 試算表記錄
+// ============================================
+
+function logToSpreadsheet(userId, fileName, feedback) {
+  try {
+    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let sheet = spreadsheet.getSheetByName('評語記錄');
+
+    // 如果工作表不存在，建立新的
+    if (!sheet) {
+      sheet = spreadsheet.insertSheet('評語記錄');
+      // 設定標題列
+      sheet.getRange(1, 1, 1, 5).setValues([['時間', '使用者ID', '檔案名稱', '評語', '狀態']]);
+      sheet.getRange(1, 1, 1, 5).setFontWeight('bold');
+    }
+
+    // 新增記錄
+    const timestamp = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm:ss');
+    const maskedUserId = userId.substring(0, 10) + '***'; // 部分遮蔽用戶ID
+
+    sheet.appendRow([timestamp, maskedUserId, fileName, feedback, '完成']);
+
+  } catch (error) {
+    console.error('logToSpreadsheet Error:', error);
+  }
+}
+
+// ============================================
+// 使用者狀態管理
+// ============================================
+
+function setUserState(userId, state) {
+  userProperties.setProperty('state_' + userId, state);
+}
+
+function getUserState(userId) {
+  return userProperties.getProperty('state_' + userId) || '';
+}
+
+function clearUserState(userId) {
+  userProperties.deleteProperty('state_' + userId);
+}
+
+// ============================================
+// 測試函式
+// ============================================
+
+function testBot() {
+  console.log('Bot 設定測試...');
+  console.log('LINE Token 長度:', LINE_CHANNEL_ACCESS_TOKEN.length);
+  console.log('OpenAI Key 長度:', OPENAI_API_KEY.length);
+  console.log('Drive Folder ID:', GOOGLE_DRIVE_FOLDER_ID);
+  console.log('Spreadsheet ID:', SPREADSHEET_ID);
+  console.log('測試完成！');
+}
+
+// 測試 PDF 提取功能 - 手動在 GAS 中執行
+function testPdfExtraction() {
+  // 從 Google Drive 資料夾取得最新的 PDF 檔案來測試
+  const folder = DriveApp.getFolderById(GOOGLE_DRIVE_FOLDER_ID);
+  const files = folder.getFilesByType('application/pdf');
+
+  if (!files.hasNext()) {
+    console.log('資料夾中沒有 PDF 檔案，請先上傳一個 PDF 來測試');
+    return;
+  }
+
+  const file = files.next();
+  console.log('測試檔案：' + file.getName());
+
+  const text = extractTextFromPdf(file);
+
+  if (text && text.length > 0) {
+    console.log('✅ PDF 提取成功！');
+    console.log('文字長度：' + text.length);
+    console.log('前 500 字：\n' + text.substring(0, 500));
+  } else {
+    console.log('❌ PDF 提取失敗，文字為空');
+  }
+}
+
+// 測試 OpenAI API
+function testOpenAI() {
+  const testContent = '這是一份關於環境保護的自主學習報告。學生研究了氣候變遷的影響，並提出了減少碳排放的建議。';
+
+  console.log('測試 OpenAI API...');
+
+  try {
+    const feedback = generateFeedback(testContent);
+    console.log('✅ OpenAI API 成功！');
+    console.log('生成的評語：\n' + feedback);
+  } catch (error) {
+    console.log('❌ OpenAI API 失敗：' + error.message);
+  }
+}
+
+// Webhook 驗證用
+function doGet(e) {
+  return ContentService.createTextOutput('LINE Bot is running!');
+}
+
+
+
+參考2:
+// ============================================
+// 自主學習評語機器人 - Google Apps Script (Gemini 版)
+// ============================================
+
+// 設定常數
+const LINE_CHANNEL_ACCESS_TOKEN = '你的_LINE_TOKEN';
+const GEMINI_API_KEY = '你的_GEMINI_API_KEY'; 
+const GOOGLE_DRIVE_FOLDER_ID = '你的_GoogleI_雲端硬碟_ID';
+const SPREADSHEET_ID = '你的_GoogleI_試算表_ID';
+
+// 使用者狀態存儲
+const userProperties = PropertiesService.getScriptProperties();
+
+// ============================================
+// 主要入口點
+// ============================================
+function doPost(e) {
+  try {
+    const json = JSON.parse(e.postData.contents);
+    const events = json.events;
+    for (let i = 0; i < events.length; i++) {
+      handleEvent(events[i]);
+    }
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// ============================================
+// 事件處理
+// ============================================
+function handleEvent(event) {
+  const userId = event.source.userId;
+  const replyToken = event.replyToken;
+
+  if (event.type === 'message' && event.message.type === 'text') {
+    const userMessage = event.message.text.trim();
+    if (userMessage === '幫我評語') {
+      setUserState(userId, 'waiting_for_file');
+      replyMessage(replyToken, '📄 我是阿亮老師，請上傳 PDF 檔案。我已升級至 Gemini 2.0 頂尖模型為你服務！');
+      return;
+    }
+    replyMessage(replyToken, '🤖 請輸入「幫我評語」開始！');
+  }
+
+  if (event.type === 'message' && event.message.type === 'file') {
+    const messageId = event.message.id;
+    const fileName = event.message.fileName;
+    if (getUserState(userId) === 'waiting_for_file' && fileName.toLowerCase().endsWith('.pdf')) {
+      replyMessage(replyToken, '⏳ Gemini 2.0 正在全速解析中，請稍候...');
+      clearUserState(userId);
+      processFileAsync(userId, messageId, fileName);
+    }
+  }
+}
+
+// ============================================
+// Gemini 2.0 核心呼叫函式
+// ============================================
+function generateGeminiFeedback(pdfContent) {
+  // 使用目前最強的 2.0 Flash 實驗版本，若要換回穩定版可改為 gemini-1.5-pro
+  const modelName = "gemini-2.5-flash"; 
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+
+  const systemPrompt = "你是一位充滿教育熱忱、文筆優美且專業的評語專家。請根據學生的自主學習成果，撰寫一段 100-150 字的繁體中文評語。結構：1.高度肯定 2.具體分析優點 3.提供進階建議。";
+
+  const payload = {
+    "contents": [{
+      "parts": [{
+        "text": `${systemPrompt}\n\n學生作品內容：\n${pdfContent}`
+      }]
+    }],
+    "generationConfig": {
+      "temperature": 0.8,
+      "maxOutputTokens": 1000
+    }
+  };
+
+  const options = {
+    "method": "post",
+    "contentType": "application/json",
+    "payload": JSON.stringify(payload),
+    "muteHttpExceptions": true
+  };
+
+  const response = UrlFetchApp.fetch(url, options);
+  const result = JSON.parse(response.getContentText());
+
+  if (result.candidates && result.candidates[0].content) {
+    return result.candidates[0].content.parts[0].text.trim();
+  } else {
+    throw new Error('模型回傳異常：' + JSON.stringify(result));
+  }
+}
+
+// ============================================
+// 支援函式
+// ============================================
+
+function processFileAsync(userId, messageId, fileName) {
+  try {
+    const blob = downloadFileFromLine(messageId);
+    const file = saveFileToDrive(blob, fileName, userId);
+    const text = extractTextFromPdf(file);
+    if (!text) throw new Error('無法讀取文字');
+
+    const feedback = generateGeminiFeedback(text);
+    logToSpreadsheet(userId, fileName, feedback);
+    pushMessage(userId, '✨ Gemini 2.0 評語 ✨\n\n' + feedback);
+  } catch (e) {
+    pushMessage(userId, '❌ 發生錯誤：' + e.message);
+  }
+}
+
+function downloadFileFromLine(id) {
+  return UrlFetchApp.fetch('https://api-data.line.me/v2/bot/message/' + id + '/content', {
+    headers: { 'Authorization': 'Bearer ' + LINE_CHANNEL_ACCESS_TOKEN }
+  }).getBlob();
+}
+
+function replyMessage(token, text) {
+  UrlFetchApp.fetch('https://api.line.me/v2/bot/message/reply', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { 'Authorization': 'Bearer ' + LINE_CHANNEL_ACCESS_TOKEN },
+    payload: JSON.stringify({ replyToken: token, messages: [{ type: 'text', text: text }] })
+  });
+}
+
+function pushMessage(to, text) {
+  UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { 'Authorization': 'Bearer ' + LINE_CHANNEL_ACCESS_TOKEN },
+    payload: JSON.stringify({ to: to, messages: [{ type: 'text', text: text }] })
+  });
+}
+
+function saveFileToDrive(blob, name, id) {
+  blob.setName(`${Date.now()}_${name}`);
+  return DriveApp.getFolderById(GOOGLE_DRIVE_FOLDER_ID).createFile(blob);
+}
+
+function extractTextFromPdf(file) {
+  const resource = { title: file.getName(), mimeType: 'application/vnd.google-apps.document' };
+  const docFile = Drive.Files.insert(resource, file.getBlob(), { convert: true });
+  const text = DocumentApp.openById(docFile.id).getBody().getText();
+  DriveApp.getFileById(docFile.id).setTrashed(true);
+  return text;
+}
+
+function logToSpreadsheet(uid, name, fb) {
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
+  sheet.appendRow([new Date(), uid, name, fb, 'Gemini 2.0']);
+}
+
+function setUserState(id, s) { userProperties.setProperty(id, s); }
+function getUserState(id) { return userProperties.getProperty(id); }
+function clearUserState(id) { userProperties.deleteProperty(id); }
+
