@@ -1,0 +1,1752 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>評量網站程式生成器 - Part 7</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a237e 50%, #283593 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image:
+                radial-gradient(2px 2px at 20px 30px, white, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 90px 40px, white, transparent),
+                radial-gradient(2px 2px at 160px 120px, rgba(255,255,255,0.9), transparent);
+            background-size: 550px 250px;
+            animation: twinkle 8s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+        }
+
+        .nav-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: rgba(26, 35, 126, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 10000;
+        }
+
+        .nav-title {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #ff9800, #ffb74d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-buttons { display: flex; gap: 12px; }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 152, 0, 0.3);
+            border-color: #ff9800;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 100px 20px 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .main-card {
+            background: rgba(255, 255, 255, 0.97);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            padding: 40px;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-align: center;
+            background: linear-gradient(135deg, #6a1b9a, #e65100);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #6a1b9a;
+            font-size: 20px;
+            margin: 30px 0 20px;
+            border-bottom: 3px solid;
+            border-image: linear-gradient(90deg, #6a1b9a, #e65100) 1;
+            padding-bottom: 10px;
+        }
+
+        h2:first-of-type {
+            margin-top: 0;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #6a1b9a;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        label .required {
+            color: #c62828;
+        }
+
+        label .hint {
+            font-weight: normal;
+            color: #666;
+            font-size: 12px;
+            display: block;
+            margin-top: 2px;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #6a1b9a;
+            box-shadow: 0 0 10px rgba(106, 27, 154, 0.2);
+        }
+
+        select {
+            cursor: pointer;
+            background: white;
+        }
+
+        .range-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .range-group input[type="range"] {
+            flex: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: #e0e0e0;
+            -webkit-appearance: none;
+        }
+
+        .range-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6a1b9a, #e65100);
+            cursor: pointer;
+        }
+
+        .range-value {
+            min-width: 50px;
+            text-align: center;
+            font-weight: 600;
+            color: #6a1b9a;
+        }
+
+        /* 部署方式選擇 */
+        .deploy-tabs {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .deploy-tab {
+            flex: 1;
+            padding: 20px;
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+            background: white;
+            position: relative;
+        }
+
+        .deploy-tab:hover {
+            border-color: #6a1b9a;
+        }
+
+        .deploy-tab.active {
+            border-color: #6a1b9a;
+            background: linear-gradient(135deg, #f3e5f5, #ede7f6);
+        }
+
+        .deploy-tab .tab-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .deploy-tab .tab-name {
+            font-weight: 700;
+            color: #333;
+            font-size: 18px;
+        }
+
+        .deploy-tab .tab-desc {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+
+        .deploy-tab .tab-badge {
+            position: absolute;
+            top: -8px;
+            right: 15px;
+            background: #4caf50;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .deploy-tab .tab-badge.recommend {
+            background: linear-gradient(135deg, #ff6f00, #ff8f00);
+        }
+
+        /* AI 服務選擇 */
+        .provider-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .provider-tab {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .provider-tab:hover {
+            border-color: #6a1b9a;
+        }
+
+        .provider-tab.active {
+            border-color: #6a1b9a;
+            background: linear-gradient(135deg, #f3e5f5, #ede7f6);
+        }
+
+        .provider-tab .tab-name {
+            font-weight: 700;
+            color: #6a1b9a;
+            font-size: 16px;
+        }
+
+        .provider-tab .tab-desc {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .provider-tab .tab-badge {
+            display: inline-block;
+            background: #4caf50;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            margin-left: 5px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6a1b9a, #8e24aa);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(106, 27, 154, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #ff6f00, #ff8f00);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(255, 111, 0, 0.4);
+        }
+
+        .btn-outline {
+            background: white;
+            color: #6a1b9a;
+            border: 2px solid #6a1b9a;
+        }
+
+        .btn-outline:hover {
+            background: #f3e5f5;
+        }
+
+        /* 程式碼輸出區 */
+        .output-section {
+            display: none;
+            margin-top: 40px;
+        }
+
+        .output-section.show {
+            display: block;
+        }
+
+        .output-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .output-tab {
+            padding: 12px 25px;
+            border: none;
+            background: #e0e0e0;
+            border-radius: 10px 10px 0 0;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .output-tab.active {
+            background: linear-gradient(135deg, #1e3a5f, #2d5a87);
+            color: white;
+        }
+
+        .code-output {
+            background: linear-gradient(135deg, #0c1445, #1a237e);
+            border-radius: 0 15px 15px 15px;
+            padding: 25px;
+            position: relative;
+            display: none;
+        }
+
+        .code-output.show {
+            display: block;
+        }
+
+        .code-output pre {
+            color: #b3e5fc;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .code-actions {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .code-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .code-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .code-btn.copied {
+            background: #4caf50;
+            border-color: #4caf50;
+        }
+
+        /* 部署指南 */
+        .deploy-guide {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+            display: none;
+        }
+
+        .deploy-guide.show {
+            display: block;
+        }
+
+        .deploy-guide h3 {
+            color: #2e7d32;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .deploy-steps {
+            display: grid;
+            gap: 12px;
+        }
+
+        .deploy-step {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .step-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2e7d32, #4caf50);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-content strong {
+            color: #1b5e20;
+        }
+
+        .step-content p {
+            margin: 0;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .step-content a {
+            color: #1976d2;
+        }
+
+        /* 提示框 */
+        .info-box {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-left: 4px solid #1976d2;
+            padding: 15px 20px;
+            border-radius: 0 10px 10px 0;
+            margin: 15px 0;
+        }
+
+        .info-box h4 {
+            color: #1565c0;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .info-box p, .info-box li {
+            font-size: 13px;
+            color: #444;
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border-left: 4px solid #ff9800;
+            padding: 15px 20px;
+            border-radius: 0 10px 10px 0;
+            margin: 15px 0;
+        }
+
+        .warning-box h4 {
+            color: #e65100;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .warning-box p {
+            font-size: 13px;
+        }
+
+        .footer-info {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            padding: 20px;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 80px 15px 30px; }
+            .main-card { padding: 25px; }
+            h1 { font-size: 24px; }
+            .form-row { grid-template-columns: 1fr; }
+            .deploy-tabs { flex-direction: column; }
+            .provider-tabs { flex-direction: column; }
+            .btn { padding: 12px 25px; font-size: 14px; }
+            .output-tabs { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <span class="nav-title">評量網站程式生成器</span>
+        <div class="nav-buttons">
+            <a href="index2.html" class="nav-btn">首頁</a>
+            <a href="Part7-4_評量網站實作.html" class="nav-btn">返回教學</a>
+            <a href="https://www.youtube.com/@Liang-yt02" target="_blank" class="nav-btn">YT</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="main-card">
+            <h1>評量網站程式生成器</h1>
+            <p class="subtitle">選擇部署方式、填入設定，自動生成主程式與 GAS 程式碼</p>
+
+            <div class="warning-box">
+                <h4>安全提醒</h4>
+                <p>此工具不會儲存或傳送您的 API Key，所有處理都在瀏覽器本地進行。請勿將 API Key 分享給他人。</p>
+            </div>
+
+            <!-- 步驟一：選擇部署方式 -->
+            <h2>步驟一：選擇部署方式</h2>
+            <div class="deploy-tabs">
+                <div class="deploy-tab active" data-deploy="netlify" onclick="selectDeploy('netlify')">
+                    <span class="tab-badge recommend">推薦</span>
+                    <div class="tab-icon">Netlify</div>
+                    <div class="tab-name">Netlify 部署</div>
+                    <div class="tab-desc">前端部署於 Netlify 免費空間<br>載入快、網址短、拖曳即可部署</div>
+                </div>
+                <div class="deploy-tab" data-deploy="gas" onclick="selectDeploy('gas')">
+                    <span class="tab-badge">Google 全家桶</span>
+                    <div class="tab-icon">GAS</div>
+                    <div class="tab-name">GAS 部署</div>
+                    <div class="tab-desc">前後端都在 Google Apps Script<br>不需額外帳號、純 Google 服務</div>
+                </div>
+            </div>
+
+            <!-- 步驟二：基本設定 -->
+            <h2>步驟二：基本設定</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Google 試算表 ID <span class="required">*</span>
+                        <span class="hint">用於記錄評語，網址中 /d/ 和 /edit 之間的字串</span>
+                    </label>
+                    <input type="text" id="spreadsheetId" placeholder="例如：1w5OjdXzs8NmGL...">
+                </div>
+                <div class="form-group">
+                    <label>教師通知 Email
+                        <span class="hint">可選，有新作品時發送通知</span>
+                    </label>
+                    <input type="text" id="teacherEmail" placeholder="例如：teacher@school.edu.tw">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>管理後台密碼 <span class="required">*</span>
+                        <span class="hint">教師登入管理後台使用</span>
+                    </label>
+                    <input type="text" id="adminPassword" placeholder="例如：teacher123" value="0207">
+                </div>
+                <div class="form-group" id="gasUrlGroup">
+                    <label>GAS 部署網址
+                        <span class="hint">部署 GAS 後取得的網址（Netlify 部署時填入）</span>
+                    </label>
+                    <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/...">
+                </div>
+            </div>
+
+            <!-- 步驟三：AI 服務設定 -->
+            <h2>步驟三：AI 服務設定</h2>
+            <div class="provider-tabs">
+                <div class="provider-tab active" data-provider="gemini" onclick="selectProvider('gemini')">
+                    <div class="tab-name">Google Gemini <span class="tab-badge">免費</span></div>
+                    <div class="tab-desc">免費額度多，適合教育使用</div>
+                </div>
+                <div class="provider-tab" data-provider="openai" onclick="selectProvider('openai')">
+                    <div class="tab-name">OpenAI GPT</div>
+                    <div class="tab-desc">品質穩定，需付費 API</div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group" id="geminiKeyGroup">
+                    <label>Gemini API Key <span class="required">*</span>
+                        <span class="hint">從 <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a> 取得</span>
+                    </label>
+                    <input type="password" id="geminiApiKey" placeholder="請貼上您的 Gemini API Key">
+                </div>
+                <div class="form-group" id="openaiKeyGroup" style="display: none;">
+                    <label>OpenAI API Key <span class="required">*</span>
+                        <span class="hint">從 <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a> 取得</span>
+                    </label>
+                    <input type="password" id="openaiApiKey" placeholder="請貼上您的 OpenAI API Key">
+                </div>
+                <div class="form-group">
+                    <label>模型版本 <span class="required">*</span></label>
+                    <select id="modelSelect">
+                        <optgroup label="Gemini 模型" id="geminiModels">
+                            <option value="gemini-2.5-flash" selected>gemini-2.5-flash（推薦，快速穩定）</option>
+                            <option value="gemini-2.5-pro">gemini-2.5-pro（進階版本）</option>
+                            <option value="gemini-3.0-flash">gemini-3.0-flash（最新快速）</option>
+                            <option value="gemini-3.0-pro">gemini-3.0-pro（最新進階）</option>
+                        </optgroup>
+                        <optgroup label="OpenAI 模型" id="openaiModels" style="display: none;">
+                            <option value="gpt-4o">gpt-4o（推薦，性價比高）</option>
+                            <option value="gpt-4.1">gpt-4.1（進階版本）</option>
+                            <option value="gpt-4-turbo">gpt-4-turbo（高速）</option>
+                            <option value="gpt-5.1">gpt-5.1（最新最強）</option>
+                        </optgroup>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 步驟四：評語風格設定 -->
+            <h2>步驟四：評語風格設定</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>語氣風格</label>
+                    <select id="toneStyle">
+                        <option value="warm" selected>溫暖、鼓勵、正向</option>
+                        <option value="friendly">友善、自然、親切</option>
+                        <option value="professional">專業、學術、正式</option>
+                        <option value="humorous">幽默、活潑、輕鬆</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>評語長度</label>
+                    <select id="feedbackLength">
+                        <option value="50-80">50-80 字（簡短）</option>
+                        <option value="80-120" selected>80-120 字（適中）</option>
+                        <option value="120-180">120-180 字（詳細）</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group full-width">
+                <label>角色定位
+                    <span class="hint">描述 AI 評語助手的身份和風格</span>
+                </label>
+                <textarea id="roleDescription" rows="2" placeholder="例如：你是一位溫暖的教師，擅長發現學生作品的亮點...">你是一位溫暖的教師，擅長根據學生的作品給予正向、具體的回饋。請用鼓勵的語氣，發現作品的亮點，並給予建設性的建議。</textarea>
+            </div>
+
+            <!-- 步驟五：進階參數 -->
+            <h2>步驟五：進階參數（可選）</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Temperature（創意度）
+                        <span class="hint">0 = 穩定一致，1 = 創意多變</span>
+                    </label>
+                    <div class="range-group">
+                        <input type="range" id="temperature" min="0" max="1" step="0.1" value="0.7" oninput="updateRangeValue('temperature')">
+                        <span class="range-value" id="temperatureValue">0.7</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>最大回應長度（Token）</label>
+                    <select id="maxTokens">
+                        <option value="500">500（簡短）</option>
+                        <option value="1000" selected>1000（標準）</option>
+                        <option value="2000">2000（詳細）</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="generateCode()">生成程式碼</button>
+                <button class="btn btn-outline" onclick="resetForm()">重設表單</button>
+            </div>
+
+            <!-- 程式碼輸出區 -->
+            <div class="output-section" id="outputSection">
+                <h2>生成的程式碼</h2>
+
+                <div class="output-tabs">
+                    <button class="output-tab active" onclick="showCodeTab('main')">主程式 (HTML)</button>
+                    <button class="output-tab" onclick="showCodeTab('gas')">GAS 程式碼</button>
+                </div>
+
+                <div class="code-output show" id="mainCodeOutput">
+                    <div class="code-actions">
+                        <button class="code-btn" onclick="copyCode('main')">複製程式碼</button>
+                        <button class="code-btn" onclick="downloadCode('main')">下載 HTML</button>
+                    </div>
+                    <pre id="mainCodeContent"></pre>
+                </div>
+
+                <div class="code-output" id="gasCodeOutput">
+                    <div class="code-actions">
+                        <button class="code-btn" onclick="copyCode('gas')">複製程式碼</button>
+                        <button class="code-btn" onclick="downloadCode('gas')">下載 .gs 檔案</button>
+                    </div>
+                    <pre id="gasCodeContent"></pre>
+                </div>
+            </div>
+
+            <!-- 部署指南 -->
+            <div class="deploy-guide" id="deployGuide">
+                <h3 id="deployGuideTitle">Netlify 部署步驟</h3>
+                <div class="deploy-steps" id="deploySteps">
+                    <!-- 動態生成 -->
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-info">
+            &copy; 2026 阿亮老師 | AI 智慧教學實戰工作坊
+        </div>
+    </div>
+
+    <script>
+        let selectedDeploy = 'netlify';
+        let selectedProvider = 'gemini';
+
+        function selectDeploy(deploy) {
+            selectedDeploy = deploy;
+            document.querySelectorAll('.deploy-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.deploy === deploy);
+            });
+
+            // 根據部署方式調整 GAS URL 欄位
+            const gasUrlGroup = document.getElementById('gasUrlGroup');
+            if (deploy === 'netlify') {
+                gasUrlGroup.style.display = 'block';
+            } else {
+                gasUrlGroup.style.display = 'none';
+            }
+        }
+
+        function selectProvider(provider) {
+            selectedProvider = provider;
+            document.querySelectorAll('.provider-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.provider === provider);
+            });
+
+            const geminiKeyGroup = document.getElementById('geminiKeyGroup');
+            const openaiKeyGroup = document.getElementById('openaiKeyGroup');
+            const geminiModels = document.getElementById('geminiModels');
+            const openaiModels = document.getElementById('openaiModels');
+            const modelSelect = document.getElementById('modelSelect');
+
+            if (provider === 'gemini') {
+                geminiKeyGroup.style.display = 'block';
+                openaiKeyGroup.style.display = 'none';
+                geminiModels.style.display = 'block';
+                openaiModels.style.display = 'none';
+                modelSelect.value = 'gemini-2.5-flash';
+            } else {
+                geminiKeyGroup.style.display = 'none';
+                openaiKeyGroup.style.display = 'block';
+                geminiModels.style.display = 'none';
+                openaiModels.style.display = 'block';
+                modelSelect.value = 'gpt-4o';
+            }
+        }
+
+        function updateRangeValue(id) {
+            const value = document.getElementById(id).value;
+            document.getElementById(id + 'Value').textContent = value;
+        }
+
+        function resetForm() {
+            document.querySelectorAll('input[type="text"], input[type="password"]').forEach(input => {
+                if (input.id !== 'adminPassword') {
+                    input.value = '';
+                }
+            });
+            document.getElementById('temperature').value = 0.7;
+            updateRangeValue('temperature');
+            document.getElementById('outputSection').classList.remove('show');
+            document.getElementById('deployGuide').classList.remove('show');
+        }
+
+        function showCodeTab(type) {
+            document.querySelectorAll('.output-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.code-output').forEach(output => output.classList.remove('show'));
+
+            if (type === 'main') {
+                document.querySelectorAll('.output-tab')[0].classList.add('active');
+                document.getElementById('mainCodeOutput').classList.add('show');
+            } else {
+                document.querySelectorAll('.output-tab')[1].classList.add('active');
+                document.getElementById('gasCodeOutput').classList.add('show');
+            }
+        }
+
+        function generateCode() {
+            const config = {
+                spreadsheetId: document.getElementById('spreadsheetId').value.trim() || 'YOUR_SPREADSHEET_ID',
+                teacherEmail: document.getElementById('teacherEmail').value.trim() || '',
+                adminPassword: document.getElementById('adminPassword').value.trim() || '0207',
+                gasUrl: document.getElementById('gasUrl').value.trim() || 'YOUR_GAS_URL',
+                geminiApiKey: document.getElementById('geminiApiKey').value.trim() || 'YOUR_GEMINI_API_KEY',
+                openaiApiKey: document.getElementById('openaiApiKey').value.trim() || 'YOUR_OPENAI_API_KEY',
+                model: document.getElementById('modelSelect').value,
+                toneStyle: document.getElementById('toneStyle').value,
+                feedbackLength: document.getElementById('feedbackLength').value,
+                roleDescription: document.getElementById('roleDescription').value.trim(),
+                temperature: document.getElementById('temperature').value,
+                maxTokens: document.getElementById('maxTokens').value
+            };
+
+            const toneMap = {
+                'friendly': '友善、自然、親切',
+                'professional': '專業、學術、正式',
+                'warm': '溫暖、鼓勵、正向',
+                'humorous': '幽默、活潑、輕鬆'
+            };
+
+            // 生成主程式
+            const mainCode = generateMainCode(config);
+            document.getElementById('mainCodeContent').textContent = mainCode;
+
+            // 生成 GAS 程式碼
+            const gasCode = selectedProvider === 'gemini'
+                ? generateGeminiGAS(config, toneMap)
+                : generateOpenAIGAS(config, toneMap);
+            document.getElementById('gasCodeContent').textContent = gasCode;
+
+            // 顯示輸出區
+            document.getElementById('outputSection').classList.add('show');
+
+            // 生成部署指南
+            generateDeployGuide();
+            document.getElementById('deployGuide').classList.add('show');
+
+            // 滾動到輸出區
+            document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function generateMainCode(config) {
+            const gasUrl = selectedDeploy === 'netlify' ? config.gasUrl : '"; // GAS 部署時會自動取得';
+
+            return `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學生作品評量系統</title>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+    <style>
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        .animate-in { animation: fade-in 0.5s ease-out; }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 font-sans">
+    <div id="app"></div>
+    <script>
+        // === 配置設定 ===
+        const GAS_API_URL = "${gasUrl}";
+        const ADMIN_PASSWORD = "${config.adminPassword}";
+
+        // === 應用程式狀態 ===
+        let currentPage = 'home';
+        let studentName = '';
+        let content = '';
+        let file = null;
+        let isSubmitting = false;
+        let submitStatus = null;
+        let searchName = '';
+        let searchResults = [];
+        let isSearching = false;
+        let adminPassword = '';
+        let isAdminAuthenticated = false;
+        let loginError = '';
+        let playingId = null;
+
+        // === 渲染函數 ===
+        function render() {
+            const app = document.getElementById('app');
+            app.innerHTML = \`
+                <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-lg border-b border-indigo-100 h-16 flex items-center">
+                    <div class="max-w-5xl mx-auto px-6 w-full flex justify-between items-center">
+                        <div class="flex items-center gap-2 font-bold text-xl text-indigo-600 cursor-pointer" onclick="navigate('home')">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
+                            學生作品評量系統
+                        </div>
+                        <div class="hidden md:flex gap-6">
+                            <button onclick="navigate('home')" class="text-sm font-semibold transition-all hover:text-indigo-500 \${currentPage === 'home' ? 'text-indigo-600' : 'text-gray-400'}">作品上傳</button>
+                            <button onclick="navigate('query')" class="text-sm font-semibold transition-all hover:text-indigo-500 \${currentPage === 'query' ? 'text-indigo-600' : 'text-gray-400'}">評語查詢</button>
+                            <button onclick="navigate('admin')" class="text-sm font-semibold transition-all hover:text-indigo-500 \${currentPage === 'admin' ? 'text-indigo-600' : 'text-gray-400'}">管理後台</button>
+                        </div>
+                    </div>
+                </nav>
+
+                <main class="pt-8 pb-24 max-w-5xl mx-auto px-4">
+                    \${currentPage === 'home' ? renderHome() : ''}
+                    \${currentPage === 'query' ? renderQuery() : ''}
+                    \${currentPage === 'admin' ? renderAdmin() : ''}
+                </main>
+
+                <!-- 手機導航 -->
+                <div class="md:hidden fixed bottom-6 left-6 right-6 h-16 bg-indigo-900 rounded-full flex justify-around items-center px-4 z-50 shadow-xl">
+                    <button onclick="navigate('home')" class="text-white transition-opacity \${currentPage === 'home' ? 'opacity-100' : 'opacity-40'}">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                    </button>
+                    <button onclick="navigate('query')" class="text-white transition-opacity \${currentPage === 'query' ? 'opacity-100' : 'opacity-40'}">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </button>
+                    <button onclick="navigate('admin')" class="text-white transition-opacity \${currentPage === 'admin' ? 'opacity-100' : 'opacity-40'}">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    </button>
+                </div>
+            \`;
+        }
+
+        function renderHome() {
+            return \`
+                <div class="max-w-2xl mx-auto space-y-8 animate-in">
+                    <div class="text-center space-y-3">
+                        <h1 class="text-4xl font-bold text-gray-900">作品檔案繳交系統</h1>
+                        <p class="text-gray-500">填寫姓名並上傳作品，系統將自動生成 AI 評語</p>
+                    </div>
+
+                    <div class="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 space-y-6">
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                學生姓名
+                            </label>
+                            <input type="text" value="\${studentName}" oninput="studentName = this.value" placeholder="例如：王小明" class="w-full px-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                                作品內容或描述
+                            </label>
+                            <textarea rows="5" oninput="content = this.value" placeholder="請簡述您的作品內容..." class="w-full px-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-indigo-500 resize-none outline-none">\${content}</textarea>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                                上傳作品檔案（可選）
+                            </label>
+                            <input type="file" onchange="file = this.files[0]; render();" class="w-full px-4 py-3 rounded-xl bg-indigo-50 border-2 border-dashed border-indigo-200 cursor-pointer">
+                            \${file ? '<p class="text-sm text-indigo-600">已選擇：' + file.name + '</p>' : ''}
+                        </div>
+
+                        <button onclick="submitWork()" \${isSubmitting || !studentName || !content ? 'disabled' : ''} class="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 transition-all">
+                            \${isSubmitting ? '<svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>' : '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>'}
+                            \${isSubmitting ? '正在提交中...' : '確認提交作品'}
+                        </button>
+
+                        \${submitStatus ? '<div class="p-4 rounded-xl text-center font-semibold ' + (submitStatus.includes('失敗') || submitStatus.includes('錯誤') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600') + '">' + submitStatus + '</div>' : ''}
+                    </div>
+                </div>
+            \`;
+        }
+
+        function renderQuery() {
+            return \`
+                <div class="max-w-3xl mx-auto space-y-8 animate-in">
+                    <div class="text-center space-y-2">
+                        <h1 class="text-3xl font-bold text-gray-900">評語與檔案查詢</h1>
+                        <p class="text-gray-500 text-sm">查看繳交紀錄與老師的評語</p>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <div class="relative flex-1">
+                            <svg class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            <input type="text" value="\${searchName}" oninput="searchName = this.value" onkeydown="if(event.key === 'Enter') queryReviews()" placeholder="輸入姓名搜尋..." class="w-full pl-12 pr-4 py-4 rounded-2xl shadow-lg focus:ring-2 focus:ring-indigo-500 outline-none font-medium">
+                        </div>
+                        <button onclick="queryReviews()" \${isSearching ? 'disabled' : ''} class="bg-indigo-600 text-white px-10 py-4 rounded-2xl font-semibold shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2">
+                            \${isSearching ? '<svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>' : ''}
+                            搜尋紀錄
+                        </button>
+                    </div>
+
+                    <div class="space-y-6">
+                        \${searchResults.length > 0 ? searchResults.map((item, index) => \`
+                            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:border-indigo-100 transition-colors">
+                                <div class="p-6 md:p-8 md:flex gap-8">
+                                    <div class="flex-1 space-y-4">
+                                        <div class="flex flex-col sm:flex-row justify-between items-start gap-4">
+                                            <div>
+                                                <p class="text-xs font-medium text-indigo-400">\${new Date(item.time).toLocaleString('zh-TW')}</p>
+                                                <h3 class="text-xl font-bold text-gray-800">\${item.name} 同學</h3>
+                                            </div>
+                                            <div class="px-4 py-2 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-700 text-white font-bold tracking-wider shadow">
+                                                \${item.fourCharComment}
+                                            </div>
+                                        </div>
+                                        <div class="bg-gray-50 p-4 rounded-xl border-l-4 border-indigo-500">
+                                            <p class="text-gray-700 leading-relaxed">\${item.feedback}</p>
+                                        </div>
+                                        \${item.fileUrl ? '<a href="' + item.fileUrl + '" target="_blank" class="inline-flex items-center gap-2 text-indigo-600 font-medium hover:bg-indigo-50 px-3 py-2 rounded-lg transition-all"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>查看繳交檔案</a>' : ''}
+                                    </div>
+                                    <div class="flex flex-col items-center justify-center gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
+                                        <button onclick="handleSpeak('\${item.fourCharComment}。\${item.feedback}', \${index})" class="w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-lg \${playingId === index ? 'bg-rose-500 text-white animate-pulse' : 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'}">
+                                            \${playingId === index ? '<svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>' : '<svg class="w-8 h-8 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>'}
+                                        </button>
+                                        <span class="text-xs font-medium \${playingId === index ? 'text-rose-500' : 'text-gray-400'}">\${playingId === index ? '正在朗讀' : '語音評語'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        \`).join('') : (searchName && !isSearching ? '<div class="text-center py-16 text-gray-300 flex flex-col items-center gap-4"><svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><p class="font-medium">找不到該學生的紀錄</p></div>' : '')}
+                    </div>
+                </div>
+            \`;
+        }
+
+        function renderAdmin() {
+            if (!isAdminAuthenticated) {
+                return \`
+                    <div class="max-w-md mx-auto mt-16 p-8 bg-white rounded-2xl shadow-xl space-y-6 animate-in">
+                        <div class="text-center space-y-2">
+                            <div class="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                            </div>
+                            <h2 class="text-2xl font-bold">管理登入</h2>
+                        </div>
+                        <div class="space-y-4">
+                            <input type="password" value="\${adminPassword}" oninput="adminPassword = this.value" onkeydown="if(event.key === 'Enter') handleAdminLogin()" placeholder="請輸入密碼" class="w-full px-4 py-3 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+                            <button onclick="handleAdminLogin()" class="w-full bg-indigo-900 text-white py-3 rounded-xl font-semibold shadow hover:bg-black transition-all">進入管理後台</button>
+                            \${loginError ? '<p class="text-red-500 text-sm text-center font-medium">' + loginError + '</p>' : ''}
+                        </div>
+                    </div>
+                \`;
+            }
+
+            return \`
+                <div class="max-w-3xl mx-auto p-8 bg-white rounded-2xl shadow-xl text-center space-y-6 animate-in">
+                    <h1 class="text-2xl font-bold text-gray-800">教師管理中心</h1>
+                    <div class="grid gap-4">
+                        <div class="p-6 bg-green-50 rounded-2xl border border-green-100">
+                            <p class="text-green-700 font-medium mb-4">系統連接正常</p>
+                            <a href="https://docs.google.com/spreadsheets/d/${config.spreadsheetId}" target="_blank" class="inline-block px-8 py-3 bg-white rounded-xl font-semibold text-indigo-700 shadow hover:shadow-lg transition-all">開啟 Google 試算表</a>
+                        </div>
+                        \${config.teacherEmail ? '<div class="p-6 bg-indigo-50 rounded-2xl border border-indigo-100"><p class="text-indigo-700 font-medium">通知 Email：' + config.teacherEmail + '</p></div>' : ''}
+                    </div>
+                    <button onclick="isAdminAuthenticated = false; adminPassword = ''; render();" class="text-gray-400 hover:text-red-500 font-medium text-sm transition-colors">安全登出</button>
+                </div>
+            \`;
+        }
+
+        // === 功能函數 ===
+        function navigate(page) {
+            currentPage = page;
+            render();
+        }
+
+        async function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        async function submitWork() {
+            if (!studentName || !content) return;
+            isSubmitting = true;
+            submitStatus = '正在上傳並由 AI 分析評語，請稍候...';
+            render();
+
+            let fileData = null, fileName = '', mimeType = '';
+            if (file) {
+                try {
+                    fileData = await fileToBase64(file);
+                    fileName = file.name;
+                    mimeType = file.type;
+                } catch (err) {
+                    console.error('File error:', err);
+                }
+            }
+
+            try {
+                await fetch(GAS_API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'submit',
+                        name: studentName,
+                        content: content,
+                        fileName: fileName,
+                        fileData: fileData,
+                        mimeType: mimeType
+                    })
+                });
+                submitStatus = '作品已成功送出！AI 評語將記錄在試算表中。';
+                studentName = '';
+                content = '';
+                file = null;
+            } catch (error) {
+                submitStatus = '提交過程發生錯誤，請重新嘗試。';
+            } finally {
+                isSubmitting = false;
+                render();
+            }
+        }
+
+        async function queryReviews() {
+            if (!searchName) return;
+            isSearching = true;
+            render();
+
+            try {
+                const response = await fetch(\`\${GAS_API_URL}?name=\${encodeURIComponent(searchName)}\`);
+                const data = await response.json();
+                searchResults = data;
+            } catch (error) {
+                console.error('Query error:', error);
+                searchResults = [];
+            } finally {
+                isSearching = false;
+                render();
+            }
+        }
+
+        function handleAdminLogin() {
+            if (adminPassword === ADMIN_PASSWORD) {
+                isAdminAuthenticated = true;
+                loginError = '';
+            } else {
+                loginError = '密碼錯誤，請重新輸入。';
+            }
+            render();
+        }
+
+        function handleSpeak(text, id) {
+            const synth = window.speechSynthesis;
+            if (playingId === id) {
+                synth.cancel();
+                playingId = null;
+                render();
+                return;
+            }
+            synth.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-TW';
+            utterance.onend = () => { playingId = null; render(); };
+            utterance.onstart = () => { playingId = id; render(); };
+            synth.speak(utterance);
+        }
+
+        // 初始渲染
+        render();
+    <\/script>
+</body>
+</html>`;
+        }
+
+        function generateGeminiGAS(config, toneMap) {
+            const emailCode = config.teacherEmail ? `
+function sendNotificationEmail(name, content, review, fileBlob) {
+  const subject = \`【新作品繳交】學生：\${name}\`;
+  const body = \`老師您好，有學生提交了新作品：\\n\\n\` +
+               \`學生姓名：\${name}\\n\` +
+               \`作品內容：\\n\${content}\\n\\n\` +
+               \`AI 評語：\${review.fourCharComment}\\n\` +
+               \`AI 回饋：\${review.feedback}\\n\\n\` +
+               \`檔案已存入 Google Drive 與試算表中。\`;
+
+  const mailOptions = { to: TEACHER_EMAIL, subject: subject, body: body };
+  if (fileBlob) mailOptions.attachments = [fileBlob];
+  MailApp.sendEmail(mailOptions);
+}` : '';
+
+            return `// ============================================
+// 評量網站 GAS 程式碼
+// AI 服務：Google Gemini
+// 模型：${config.model}
+// 生成時間：${new Date().toLocaleString('zh-TW')}
+// ============================================
+
+// === 設定區域 ===
+const SPREADSHEET_ID = '${config.spreadsheetId}';
+const GEMINI_API_KEY = '${config.geminiApiKey}';
+const MODEL_NAME = '${config.model}';
+${config.teacherEmail ? `const TEACHER_EMAIL = '${config.teacherEmail}';` : '// const TEACHER_EMAIL = \'\'; // 未設定通知 Email'}
+
+// AI 回應設定
+const AI_CONFIG = {
+  temperature: ${config.temperature},
+  maxOutputTokens: ${config.maxTokens},
+  tone: '${toneMap[config.toneStyle]}',
+  feedbackLength: '${config.feedbackLength}',
+  roleDescription: \`${config.roleDescription}\`
+};
+
+// ============================================
+// 主要入口點
+// ============================================
+function doGet(e) {
+  try {
+    const name = e.parameter.name;
+    if (!name) return createResponse({ error: 'Name required' });
+
+    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
+    const data = sheet.getDataRange().getValues();
+    data.shift(); // 移除標題列
+
+    const results = data.filter(row => row[1] == name).map(row => ({
+      time: row[0],
+      name: row[1],
+      feedback: row[4],
+      fourCharComment: row[3],
+      fileUrl: row[5]
+    })).reverse();
+
+    return createResponse(results);
+  } catch (err) {
+    return createResponse({ error: err.toString() });
+  }
+}
+
+function doPost(e) {
+  try {
+    const params = JSON.parse(e.postData.contents);
+    const { name, content, fileName, fileData, mimeType } = params;
+
+    // 1. 呼叫 AI 生成評語
+    const aiReview = getGeminiReview(content);
+
+    // 2. 處理檔案上傳
+    let fileUrl = "";
+    let fileBlob = null;
+    if (fileData) {
+      fileBlob = Utilities.newBlob(Utilities.base64Decode(fileData), mimeType, fileName);
+      const folder = getFolder("學生作品附件庫");
+      const file = folder.createFile(fileBlob);
+      fileUrl = file.getUrl();
+    }
+
+    // 3. 寫入試算表
+    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
+    sheet.appendRow([new Date(), name, content, aiReview.fourCharComment, aiReview.feedback, fileUrl]);
+
+    // 4. 發送通知信（如果有設定）
+    ${config.teacherEmail ? 'sendNotificationEmail(name, content, aiReview, fileBlob);' : '// sendNotificationEmail(name, content, aiReview, fileBlob);'}
+
+    return createResponse({ status: 'success' });
+  } catch (err) {
+    return createResponse({ status: 'error', message: err.toString() });
+  }
+}
+
+// ============================================
+// Gemini API 呼叫
+// ============================================
+function getGeminiReview(text) {
+  const url = \`https://generativelanguage.googleapis.com/v1beta/models/\${MODEL_NAME}:generateContent?key=\${GEMINI_API_KEY}\`;
+
+  const prompt = \`\${AI_CONFIG.roleDescription}
+
+【任務】
+請針對學生的作品給予回饋，語氣為「\${AI_CONFIG.tone}」，字數約 \${AI_CONFIG.feedbackLength} 字。
+
+【輸出格式】
+請務必回傳純 JSON 格式：
+{
+  "fourCharComment": "八個字組成的短語評語（例如：探索未知勇於嘗試）",
+  "feedback": "詳細的文字回饋"
+}
+
+【學生作品內容】
+\${text}\`;
+
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: AI_CONFIG.temperature,
+        maxOutputTokens: AI_CONFIG.maxOutputTokens,
+        responseMimeType: "application/json"
+      }
+    }),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const res = UrlFetchApp.fetch(url, options);
+    const jsonStr = JSON.parse(res.getContentText()).candidates[0].content.parts[0].text;
+    // 強化解析：提取 JSON 部分
+    const cleanJson = jsonStr.match(/\\{[\\s\\S]*\\}/)[0];
+    return JSON.parse(cleanJson);
+  } catch (e) {
+    console.error('Gemini API Error:', e);
+    return {
+      fourCharComment: "用心寫作值得鼓勵",
+      feedback: "老師收到了你的作品，內容非常有意義，請繼續保持這份創作的熱情！"
+    };
+  }
+}
+${emailCode}
+
+// ============================================
+// 輔助函數
+// ============================================
+function getFolder(folderName) {
+  const folders = DriveApp.getFoldersByName(folderName);
+  return folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+}
+
+function createResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ============================================
+// 測試與授權
+// ============================================
+function manualAuthTest() {
+  Logger.log("正在測試權限...");
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
+  Logger.log("試算表讀取成功: " + sheet.getName());
+  ${config.teacherEmail ? `MailApp.sendEmail(TEACHER_EMAIL, "權限測試", "如果您收到這封信，代表 GAS 郵件權限已開啟。");
+  Logger.log("測試郵件已發送。");` : '// 未設定 Email，跳過郵件測試'}
+  Logger.log("測試完成！");
+}
+
+function testGeminiAPI() {
+  const testContent = '這是一份關於環境保護的學習報告，學生研究了氣候變遷的影響。';
+  console.log('測試 Gemini API...');
+  try {
+    const feedback = getGeminiReview(testContent);
+    console.log('Gemini API 成功！');
+    console.log('生成的評語：', JSON.stringify(feedback, null, 2));
+  } catch (error) {
+    console.log('Gemini API 失敗：' + error.message);
+  }
+}`;
+        }
+
+        function generateOpenAIGAS(config, toneMap) {
+            const emailCode = config.teacherEmail ? `
+function sendNotificationEmail(name, content, review, fileBlob) {
+  const subject = \`【新作品繳交】學生：\${name}\`;
+  const body = \`老師您好，有學生提交了新作品：\\n\\n\` +
+               \`學生姓名：\${name}\\n\` +
+               \`作品內容：\\n\${content}\\n\\n\` +
+               \`AI 評語：\${review.fourCharComment}\\n\` +
+               \`AI 回饋：\${review.feedback}\\n\\n\` +
+               \`檔案已存入 Google Drive 與試算表中。\`;
+
+  const mailOptions = { to: TEACHER_EMAIL, subject: subject, body: body };
+  if (fileBlob) mailOptions.attachments = [fileBlob];
+  MailApp.sendEmail(mailOptions);
+}` : '';
+
+            return `// ============================================
+// 評量網站 GAS 程式碼
+// AI 服務：OpenAI GPT
+// 模型：${config.model}
+// 生成時間：${new Date().toLocaleString('zh-TW')}
+// ============================================
+
+// === 設定區域 ===
+const SPREADSHEET_ID = '${config.spreadsheetId}';
+const OPENAI_API_KEY = '${config.openaiApiKey}';
+const MODEL_NAME = '${config.model}';
+${config.teacherEmail ? `const TEACHER_EMAIL = '${config.teacherEmail}';` : '// const TEACHER_EMAIL = \'\'; // 未設定通知 Email'}
+
+// AI 回應設定
+const AI_CONFIG = {
+  temperature: ${config.temperature},
+  maxTokens: ${config.maxTokens},
+  tone: '${toneMap[config.toneStyle]}',
+  feedbackLength: '${config.feedbackLength}',
+  roleDescription: \`${config.roleDescription}\`
+};
+
+// ============================================
+// 主要入口點
+// ============================================
+function doGet(e) {
+  try {
+    const name = e.parameter.name;
+    if (!name) return createResponse({ error: 'Name required' });
+
+    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
+    const data = sheet.getDataRange().getValues();
+    data.shift();
+
+    const results = data.filter(row => row[1] == name).map(row => ({
+      time: row[0],
+      name: row[1],
+      feedback: row[4],
+      fourCharComment: row[3],
+      fileUrl: row[5]
+    })).reverse();
+
+    return createResponse(results);
+  } catch (err) {
+    return createResponse({ error: err.toString() });
+  }
+}
+
+function doPost(e) {
+  try {
+    const params = JSON.parse(e.postData.contents);
+    const { name, content, fileName, fileData, mimeType } = params;
+
+    // 1. 呼叫 AI 生成評語
+    const aiReview = getOpenAIReview(content);
+
+    // 2. 處理檔案上傳
+    let fileUrl = "";
+    let fileBlob = null;
+    if (fileData) {
+      fileBlob = Utilities.newBlob(Utilities.base64Decode(fileData), mimeType, fileName);
+      const folder = getFolder("學生作品附件庫");
+      const file = folder.createFile(fileBlob);
+      fileUrl = file.getUrl();
+    }
+
+    // 3. 寫入試算表
+    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
+    sheet.appendRow([new Date(), name, content, aiReview.fourCharComment, aiReview.feedback, fileUrl]);
+
+    // 4. 發送通知信
+    ${config.teacherEmail ? 'sendNotificationEmail(name, content, aiReview, fileBlob);' : '// sendNotificationEmail(name, content, aiReview, fileBlob);'}
+
+    return createResponse({ status: 'success' });
+  } catch (err) {
+    return createResponse({ status: 'error', message: err.toString() });
+  }
+}
+
+// ============================================
+// OpenAI API 呼叫
+// ============================================
+function getOpenAIReview(text) {
+  const url = 'https://api.openai.com/v1/chat/completions';
+
+  const systemPrompt = \`\${AI_CONFIG.roleDescription}
+
+【任務】
+請針對學生的作品給予回饋，語氣為「\${AI_CONFIG.tone}」，字數約 \${AI_CONFIG.feedbackLength} 字。
+
+【輸出格式】
+請務必回傳純 JSON 格式：
+{
+  "fourCharComment": "八個字組成的短語評語（例如：探索未知勇於嘗試）",
+  "feedback": "詳細的文字回饋"
+}\`;
+
+  const payload = {
+    model: MODEL_NAME,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: '請根據以下學生作品給予評語：\\n\\n' + text }
+    ],
+    max_tokens: parseInt(AI_CONFIG.maxTokens),
+    temperature: parseFloat(AI_CONFIG.temperature),
+    response_format: { type: "json_object" }
+  };
+
+  const options = {
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + OPENAI_API_KEY
+    },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const res = UrlFetchApp.fetch(url, options);
+    const result = JSON.parse(res.getContentText());
+    if (result.choices && result.choices[0]) {
+      return JSON.parse(result.choices[0].message.content);
+    }
+    throw new Error('Invalid response');
+  } catch (e) {
+    console.error('OpenAI API Error:', e);
+    return {
+      fourCharComment: "用心寫作值得鼓勵",
+      feedback: "老師收到了你的作品，內容非常有意義，請繼續保持這份創作的熱情！"
+    };
+  }
+}
+${emailCode}
+
+// ============================================
+// 輔助函數
+// ============================================
+function getFolder(folderName) {
+  const folders = DriveApp.getFoldersByName(folderName);
+  return folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+}
+
+function createResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ============================================
+// 測試與授權
+// ============================================
+function manualAuthTest() {
+  Logger.log("正在測試權限...");
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
+  Logger.log("試算表讀取成功: " + sheet.getName());
+  ${config.teacherEmail ? `MailApp.sendEmail(TEACHER_EMAIL, "權限測試", "如果您收到這封信，代表 GAS 郵件權限已開啟。");
+  Logger.log("測試郵件已發送。");` : '// 未設定 Email，跳過郵件測試'}
+  Logger.log("測試完成！");
+}
+
+function testOpenAIAPI() {
+  const testContent = '這是一份關於環境保護的學習報告，學生研究了氣候變遷的影響。';
+  console.log('測試 OpenAI API...');
+  try {
+    const feedback = getOpenAIReview(testContent);
+    console.log('OpenAI API 成功！');
+    console.log('生成的評語：', JSON.stringify(feedback, null, 2));
+  } catch (error) {
+    console.log('OpenAI API 失敗：' + error.message);
+  }
+}`;
+        }
+
+        function generateDeployGuide() {
+            const title = document.getElementById('deployGuideTitle');
+            const steps = document.getElementById('deploySteps');
+
+            if (selectedDeploy === 'netlify') {
+                title.textContent = 'Netlify + GAS 部署步驟';
+                steps.innerHTML = `
+                    <div class="deploy-step">
+                        <span class="step-num">1</span>
+                        <div class="step-content">
+                            <p><strong>部署 GAS 程式</strong> - 前往 <a href="https://script.google.com" target="_blank">Google Apps Script</a>，建立新專案，貼上 GAS 程式碼</p>
+                        </div>
+                    </div>
+                    <div class="deploy-step">
+                        <span class="step-num">2</span>
+                        <div class="step-content">
+                            <p><strong>啟用 Drive API</strong> - 在 GAS 編輯器左側點擊「服務」→ 新增「Drive API」</p>
+                        </div>
+                    </div>
+                    <div class="deploy-step">
+                        <span class="step-num">3</span>
+                        <div class="step-content">
+                            <p><strong>執行授權測試</strong> - 執行 manualAuthTest 函數，允許 Google 權限</p>
+                        </div>
+                    </div>
+                    <div class="deploy-step">
+                        <span class="step-num">4</span>
+                        <div class="step-content">
+                            <p><strong>部署為網路應用程式</strong> - 點擊「部署」→「新增部署」→「網路應用程式」<br>執行身分：「我」/ 存取權：「所有人」</p>
+                        </div>
+                    </div>
+                    <div class="deploy-step">
+                        <span class="step-num">5</span>
+                        <div class="step-content">
+                            <p><strong>複製部署網址</strong> - 複製產生的網址，這就是您的 GAS API 網址</p>
+                        </div>
+                    </div>
+                    <div class="deploy-step">
+                        <span class="step-num">6</span>
+                        <div class="step-content">
+                            <p><strong>更新主程式</strong> - 將 GAS 網址填入生成器的「GAS 部署網址」欄位，重新生成主程式</p>
+                        </div>
+                    </div>
+                    <div class="deploy-step">
+                        <span class="step-num">7</span>
+                        <div class="step-content">
+                            <p><strong>部署到 Netlify</strong> - 前往 <a href="https://app.netlify.com/drop" target="_blank">Netlify Drop</a>，將 HTML 檔案拖曳上傳</p>
+                        </div>
+                    </div>
+                    <div class="deploy-step">
+                        <span class="step-num">8</span>
+                        <div class="step-content">
+                            <p><strong>自訂網址</strong> - 在 Netlify 的「Site configuration」修改網站名稱，例如：your-class.netlify.app</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                title.textContent = 'GAS 全部署步驟';
+                steps.innerHTML = `
+                    <div class="deploy-step">
+                        <span class="step-num">1</span>
+                        <div class="step-content">
+                            <p><strong>建立 GAS 專案</strong> - 前往 <a href="https://script.google.com" target="_blank">Google Apps Script</a>，建立新專案</p>
+                        </div>
+                    </div>
+                    <div class="deploy-step">
+                        <span class="step-num">2</span>
+                        <div class="step-content">
+                            <p><strong>貼上 GAS 程式碼</strong> - 在 Code.gs 檔案中貼上 GAS 程式碼</p>
+                        </div>
+                    </div>
+                    <div class="deploy-step">
+                        <span class="step-num">3</span>
+                        <div class="step-content">
+                            <p><strong>建立 HTML 檔案</strong> - 點擊「+」→「HTML」，命名為 index，貼上主程式 HTML 程式碼</p>
+                        </div>
+                    </div>
+                    <div class="deploy-step">
+                        <span class="step-num">4</span>
+                        <div class="step-content">
+                            <p><strong>修改 doGet 函數</strong> - 在 GAS 程式碼最上方加入：<br><code>function doGet() { return HtmlService.createHtmlOutputFromFile('index'); }</code></p>
+                        </div>
+                    </div>
+                    <div class="deploy-step">
+                        <span class="step-num">5</span>
+                        <div class="step-content">
+                            <p><strong>啟用 Drive API</strong> - 在左側點擊「服務」→ 新增「Drive API」</p>
+                        </div>
+                    </div>
+                    <div class="deploy-step">
+                        <span class="step-num">6</span>
+                        <div class="step-content">
+                            <p><strong>執行授權測試</strong> - 執行 manualAuthTest 函數，允許 Google 權限</p>
+                        </div>
+                    </div>
+                    <div class="deploy-step">
+                        <span class="step-num">7</span>
+                        <div class="step-content">
+                            <p><strong>部署為網路應用程式</strong> - 點擊「部署」→「新增部署」→「網路應用程式」<br>執行身分：「我」/ 存取權：「所有人」</p>
+                        </div>
+                    </div>
+                    <div class="deploy-step">
+                        <span class="step-num">8</span>
+                        <div class="step-content">
+                            <p><strong>複製網址</strong> - 部署完成後的網址就是您的評量網站網址</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function copyCode(type) {
+            const content = type === 'main'
+                ? document.getElementById('mainCodeContent').textContent
+                : document.getElementById('gasCodeContent').textContent;
+
+            navigator.clipboard.writeText(content).then(() => {
+                const btns = document.querySelectorAll(`#${type}CodeOutput .code-btn`);
+                btns[0].textContent = '已複製！';
+                btns[0].classList.add('copied');
+                setTimeout(() => {
+                    btns[0].textContent = '複製程式碼';
+                    btns[0].classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        function downloadCode(type) {
+            const content = type === 'main'
+                ? document.getElementById('mainCodeContent').textContent
+                : document.getElementById('gasCodeContent').textContent;
+
+            const filename = type === 'main' ? 'index.html' : 'Code.gs';
+            const mimeType = type === 'main' ? 'text/html' : 'text/plain';
+
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

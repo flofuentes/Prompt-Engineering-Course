@@ -1,0 +1,94 @@
+// --- 設定區域 ---
+const SPREADSHEET_ID = '1oc4tc1V0uXhMDKFv68Y5BHH3S4ZHfCuipvoKF4k6Ez4'; 
+const TEACHER_EMAIL = '3a01chatgpt@gmail.com';
+const GEMINI_API_KEY = 'AIzaSyDiBCYKRZfyQTnfyZDgo8JcVdbVvZNmFKU'; // 填入您的 Gemini API Key
+
+function doGet(e) {
+  const name = e.parameter.name;
+  if (!name) return createResponse({ error: 'Name required' });
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
+  const data = sheet.getDataRange().getValues();
+  data.shift();
+  const results = data.filter(row => row[1] == name).map(row => ({
+    time: row[0],
+    name: row[1],
+    feedback: row[4],
+    fourCharComment: row[3],
+    fileUrl: row[5]
+  })).reverse();
+  return createResponse(results);
+}
+
+function doPost(e) {
+  const params = JSON.parse(e.postData.contents);
+  const { name, content, fileName, fileData, mimeType } = params;
+
+  // 1. 生成評語
+  const aiReview = getGeminiReview(content);
+  
+  // 2. 處理檔案上傳
+  let fileUrl = "";
+  let fileBlob = null;
+  if (fileData) {
+    fileBlob = Utilities.newBlob(Utilities.base64Decode(fileData), mimeType, fileName);
+    const folder = getFolder("學生作品附件庫");
+    const file = folder.createFile(fileBlob);
+    fileUrl = file.getUrl();
+  }
+
+  // 3. 寫入試算表
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
+  sheet.appendRow([new Date(), name, content, aiReview.fourCharComment, aiReview.feedback, fileUrl]);
+
+  // 4. 發送電子郵件通知
+  sendNotificationEmail(name, content, aiReview, fileBlob);
+
+  return createResponse({ status: 'success' });
+}
+
+function getGeminiReview(text) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const prompt = `你是一位資深教師。請針對以下作品給予 JSON 格式評語：{"fourCharComment": "八字短語(例如：探索未知勇於嘗試)", "feedback": "50-100字溫馨回饋"}。作品：${text}`;
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } })
+  };
+  try {
+    const res = UrlFetchApp.fetch(url, options);
+    return JSON.parse(JSON.parse(res.getContentText()).candidates[0].content.parts[0].text);
+  } catch (e) {
+    return { fourCharComment: "用心寫作值得鼓勵", feedback: "收到了你的作品，表現得很棒！" };
+  }
+}
+
+function sendNotificationEmail(name, content, review, fileBlob) {
+  const subject = `【新作品繳交】學生：${name}`;
+  const body = `老師您好，有學生提交了新作品：\n\n` +
+               `學生姓名：${name}\n` +
+               `作品內容：\n${content}\n\n` +
+               `AI 評語：${review.fourCharComment}\n` +
+               `AI 回饋：${review.feedback}\n\n` +
+               `檔案已存入 Google Drive 與試算表中。`;
+  
+  const mailOptions = {
+    to: TEACHER_EMAIL,
+    subject: subject,
+    body: body
+  };
+
+  if (fileBlob) {
+    mailOptions.attachments = [fileBlob];
+  }
+
+  MailApp.sendEmail(mailOptions);
+}
+
+function getFolder(folderName) {
+  const folders = DriveApp.getFoldersByName(folderName);
+  return folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+}
+
+function createResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+}

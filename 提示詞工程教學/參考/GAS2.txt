@@ -1,0 +1,129 @@
+// --- 硬編碼配置 (確保直接可用) ---
+const SPREADSHEET_ID = '1oc4tc1V0uXhMDKFv68Y5BHH3S4ZHfCuipvoKF4k6Ez4'; 
+const TEACHER_EMAIL = '3a01chatgpt@gmail.com';
+const GEMINI_API_KEY = 'AIzaSyDiBCYKRZfyQTnfyZDgo8JcVdbVvZNmFKU'; 
+
+/**
+ * 重要：請在 GAS 編輯器中點擊上方的「執行」按鈕執行此函數 (manualAuthTest)
+ * 這會觸發 Google 的授權視窗，請務必點擊「允許」
+ */
+function manualAuthTest() {
+  Logger.log("正在測試權限...");
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
+  Logger.log("試算表讀取成功: " + sheet.getName());
+  MailApp.sendEmail(TEACHER_EMAIL, "權限測試", "如果您收到這封信，代表 GAS 郵件權限已開啟。");
+  Logger.log("測試郵件已發送。");
+}
+
+function doGet(e) {
+  try {
+    const name = e.parameter.name;
+    if (!name) return createResponse({ error: 'Name required' });
+    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
+    const data = sheet.getDataRange().getValues();
+    data.shift();
+    const results = data.filter(row => row[1] == name).map(row => ({
+      time: row[0],
+      name: row[1],
+      feedback: row[4],
+      fourCharComment: row[3],
+      fileUrl: row[5]
+    })).reverse();
+    return createResponse(results);
+  } catch (err) {
+    return createResponse({ error: err.toString() });
+  }
+}
+
+function doPost(e) {
+  try {
+    const params = JSON.parse(e.postData.contents);
+    const { name, content, fileName, fileData, mimeType } = params;
+
+    // 1. 生成評語 (加入強化解析)
+    const aiReview = getGeminiReview(content);
+    
+    // 2. 處理檔案上傳
+    let fileUrl = "";
+    let fileBlob = null;
+    if (fileData) {
+      fileBlob = Utilities.newBlob(Utilities.base64Decode(fileData), mimeType, fileName);
+      const folder = getFolder("學生作品附件庫");
+      const file = folder.createFile(fileBlob);
+      fileUrl = file.getUrl();
+    }
+
+    // 3. 寫入試算表
+    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
+    sheet.appendRow([new Date(), name, content, aiReview.fourCharComment, aiReview.feedback, fileUrl]);
+
+    // 4. 發送電子郵件通知
+    sendNotificationEmail(name, content, aiReview, fileBlob);
+
+    return createResponse({ status: 'success' });
+  } catch (err) {
+    return createResponse({ status: 'error', message: err.toString() });
+  }
+}
+
+function getGeminiReview(text) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const prompt = `你是一位溫暖的教師。請針對學生的作品給予回饋。
+  請務必回傳純 JSON 格式，如下：
+  {
+    "fourCharComment": "八個字組成的短語(例如：探索未知勇於嘗試)",
+    "feedback": "50-100字溫馨回饋"
+  }
+  學生的作品內容：${text}`;
+
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify({ 
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: "application/json" }
+    }),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const res = UrlFetchApp.fetch(url, options);
+    const jsonStr = JSON.parse(res.getContentText()).candidates[0].content.parts[0].text;
+    // 強化解析：提取 JSON 部分，防止 AI 回傳 Markdown 標籤
+    const cleanJson = jsonStr.match(/\{[\s\S]*\}/)[0];
+    return JSON.parse(cleanJson);
+  } catch (e) {
+    return { fourCharComment: "用心寫作值得鼓勵", feedback: "老師收到了你的作品，內容非常有意義，請繼續保持這份創作的熱情！" };
+  }
+}
+
+function sendNotificationEmail(name, content, review, fileBlob) {
+  const subject = `【新作品繳交】學生：${name}`;
+  const body = `老師您好，有學生提交了新作品：\n\n` +
+               `學生姓名：${name}\n` +
+               `作品內容：\n${content}\n\n` +
+               `AI 評語：${review.fourCharComment}\n` +
+               `AI 回饋：${review.feedback}\n\n` +
+               `檔案已存入 Google Drive 與試算表中。`;
+  
+  const mailOptions = {
+    to: TEACHER_EMAIL,
+    subject: subject,
+    body: body
+  };
+
+  if (fileBlob) {
+    mailOptions.attachments = [fileBlob];
+  }
+
+  MailApp.sendEmail(mailOptions);
+}
+
+function getFolder(folderName) {
+  const folders = DriveApp.getFoldersByName(folderName);
+  return folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+}
+
+function createResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+}

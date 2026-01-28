@@ -1,0 +1,433 @@
+import React, { useState, useRef } from 'react';
+import { 
+  Search, 
+  Send, 
+  User, 
+  BookOpen, 
+  Play, 
+  Pause, 
+  Settings, 
+  Clock, 
+  MessageSquare,
+  Award,
+  Loader2,
+  Lock,
+  AlertCircle,
+  FileUp,
+  FileText,
+  Paperclip
+} from 'lucide-react';
+
+// --- 配置設定 ---
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxWXMGkOUMowi9Hjl421xmIikClfrEXIeqL_bXSpmQGOT_bURAmL3rE35hloE4egMIxsQ/exec"; 
+
+// --- 子組件定義 (移至外部) ---
+
+const Home = ({ 
+  studentName, setStudentName, 
+  content, setContent, 
+  file, setFile, 
+  isSubmitting, submitStatus, 
+  submitWork 
+}) => (
+  <div className="max-w-2xl mx-auto space-y-8 p-4 animate-in fade-in">
+    <div className="text-center space-y-3">
+      <h1 className="text-4xl font-black text-slate-900 tracking-tight">作品檔案繳交系統</h1>
+      <p className="text-slate-500 font-medium">填寫姓名並上傳作品，檔案將直接發送給老師</p>
+    </div>
+
+    <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-slate-100 space-y-8">
+      <div className="grid grid-cols-1 gap-6">
+        <div className="space-y-3">
+          <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+            <User size={18} className="text-indigo-600" /> 學生姓名
+          </label>
+          <input 
+            type="text" 
+            value={studentName}
+            onChange={(e) => setStudentName(e.target.value)}
+            disabled={isSubmitting}
+            placeholder="例如：王小明"
+            className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+          />
+        </div>
+
+        <div className="space-y-3">
+          <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+            <BookOpen size={18} className="text-indigo-600" /> 作品內容或描述
+          </label>
+          <textarea 
+            rows="5"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            disabled={isSubmitting}
+            placeholder="請簡述您的作品內容..."
+            className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none font-medium outline-none"
+          />
+        </div>
+
+        <div className="space-y-3">
+          <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+            <Paperclip size={18} className="text-indigo-600" /> 上傳作品檔案 (可選)
+          </label>
+          <div className="relative group">
+            <input 
+              type="file" 
+              onChange={(e) => setFile(e.target.files[0])}
+              className="hidden"
+              id="file-upload"
+              disabled={isSubmitting}
+            />
+            <label 
+              htmlFor="file-upload"
+              className={`flex items-center justify-between w-full px-5 py-4 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${
+                file ? 'bg-indigo-100 border-indigo-300' : 'bg-indigo-50 border-indigo-200 group-hover:bg-indigo-100'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <FileUp className="text-indigo-500" />
+                <span className="text-indigo-700 font-bold truncate max-w-[200px]">
+                  {file ? file.name : "點擊或拖曳檔案至此"}
+                </span>
+              </div>
+              {file && <span className="text-xs text-indigo-400 font-bold">已選擇</span>}
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <button 
+        onClick={submitWork}
+        disabled={isSubmitting || !studentName || !content}
+        className="w-full bg-slate-900 hover:bg-black text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50 shadow-xl"
+      >
+        {isSubmitting ? <Loader2 className="animate-spin" /> : <Send size={22} />}
+        {isSubmitting ? '正在安全提交中...' : '確認提交作品'}
+      </button>
+
+      {submitStatus && (
+        <div className={`p-5 rounded-2xl text-center font-bold border animate-in slide-in-from-top ${submitStatus.includes('失敗') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-green-50 text-green-700 border-green-100 animate-pulse'}`}>
+          {submitStatus}
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+const QueryView = ({ 
+  searchName, setSearchName, 
+  isSearching, queryReviews, 
+  searchResults, playingId, handleSpeak 
+}) => (
+  <div className="max-w-4xl mx-auto space-y-8 p-4">
+    <div className="text-center space-y-2">
+      <h1 className="text-3xl font-black text-slate-900 tracking-tight">評語與檔案查詢</h1>
+      <p className="text-slate-500 text-sm font-medium">查看繳交紀錄與老師的給分</p>
+    </div>
+
+    <div className="flex flex-col sm:flex-row gap-4">
+      <div className="relative flex-1">
+        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+        <input 
+          type="text"
+          value={searchName}
+          onChange={(e) => setSearchName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && queryReviews()}
+          placeholder="輸入姓名搜尋..."
+          className="w-full pl-14 pr-6 py-5 rounded-3xl border-none shadow-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700"
+        />
+      </div>
+      <button 
+        onClick={queryReviews}
+        disabled={isSearching}
+        className="bg-indigo-600 text-white px-12 py-5 sm:py-0 rounded-3xl font-black shadow-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 active:scale-95"
+      >
+        {isSearching && <Loader2 className="animate-spin" size={20} />}
+        搜尋紀錄
+      </button>
+    </div>
+
+    <div className="space-y-8 pb-20">
+      {searchResults.length > 0 ? searchResults.map((item, index) => (
+        <div key={index} className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden hover:border-indigo-100 transition-colors">
+          <div className="p-8 md:p-10 md:flex gap-10">
+            <div className="flex-1 space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-indigo-400">{new Date(item.time).toLocaleString('zh-TW')}</p>
+                  <h3 className="text-2xl font-black text-slate-800">{item.name} 同學</h3>
+                </div>
+                <div className="px-6 py-3 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-700 text-white font-black text-xl tracking-widest shadow-lg">
+                  {item.fourCharComment}
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 relative overflow-hidden">
+                <p className="text-slate-700 leading-loose font-medium relative z-10">{item.feedback}</p>
+                <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 opacity-20"></div>
+              </div>
+
+              {item.fileUrl && (
+                <a 
+                  href={item.fileUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-indigo-600 font-bold hover:bg-indigo-50 px-4 py-2 rounded-xl transition-all"
+                >
+                  <FileText size={18} /> 查看繳交檔案
+                </a>
+              )}
+            </div>
+
+            <div className="flex flex-col items-center justify-center gap-4 border-t md:border-t-0 md:border-l border-slate-50 pt-6 md:pt-0">
+              <button 
+                onClick={() => handleSpeak(`${item.fourCharComment}。${item.feedback}`, index)}
+                className={`w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-xl active:scale-90 ${playingId === index ? 'bg-rose-500 text-white animate-pulse' : 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'}`}
+              >
+                {playingId === index ? <Pause size={32} /> : <Play size={32} className="ml-1" />}
+              </button>
+              <span className={`text-[10px] font-black tracking-widest uppercase ${playingId === index ? 'text-rose-500' : 'text-slate-400'}`}>
+                {playingId === index ? '正在朗讀' : '語音評語'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )) : searchName && !isSearching && (
+        <div className="text-center py-20 text-slate-300 flex flex-col items-center gap-4">
+          <AlertCircle size={48} />
+          <p className="font-bold">找不到該學生的紀錄</p>
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+const TeacherPanel = ({ 
+  isAdminAuthenticated, setIsAdminAuthenticated, 
+  adminPassword, setAdminPassword, 
+  loginError, handleAdminLogin 
+}) => {
+  if (!isAdminAuthenticated) {
+    return (
+      <div className="max-w-md mx-auto mt-20 p-10 bg-white rounded-[2.5rem] shadow-2xl space-y-8 border border-slate-50">
+        <div className="text-center space-y-2">
+          <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-4">
+            <Lock size={32} />
+          </div>
+          <h2 className="text-2xl font-black">管理登入</h2>
+        </div>
+        <div className="space-y-4">
+          <input 
+            type="password"
+            value={adminPassword}
+            onChange={(e) => setAdminPassword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
+            placeholder="密碼"
+            className="w-full px-6 py-4 rounded-2xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 transition-all border-none font-bold"
+          />
+          <button 
+            onClick={handleAdminLogin}
+            className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-black transition-all active:scale-95"
+          >
+            進入管理後台
+          </button>
+          {loginError && <p className="text-red-500 text-xs text-center font-bold">{loginError}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto p-10 bg-white rounded-[3rem] shadow-xl text-center space-y-8 border border-slate-50">
+      <h1 className="text-3xl font-black text-slate-800">教師管理中心</h1>
+      <div className="grid gap-6">
+        <div className="p-8 bg-green-50 rounded-3xl border border-green-100">
+          <p className="text-green-700 font-bold mb-4">✅ 系統連接正常</p>
+          <a 
+            href="https://docs.google.com/spreadsheets/d/1oc4tc1V0uXhMDKFv68Y5BHH3S4ZHfCuipvoKF4k6Ez4" 
+            target="_blank" 
+            className="inline-block px-10 py-4 bg-white rounded-2xl font-black text-indigo-700 shadow-md hover:shadow-lg transition-all"
+          >
+            開啟 Google 試算表檢視資料
+          </a>
+        </div>
+        <div className="p-8 bg-indigo-50 rounded-3xl border border-indigo-100">
+          <p className="text-indigo-700 font-bold">通知電子郵件：3a01chatgpt@gmail.com</p>
+          <p className="text-slate-400 text-xs mt-2 italic">提示：若沒收到信，請檢查垃圾信箱或確認 GAS 授權。</p>
+        </div>
+      </div>
+      <button onClick={() => {setIsAdminAuthenticated(false); setAdminPassword('');}} className="text-slate-400 hover:text-red-500 font-bold text-sm transition-colors">安全登出系統</button>
+    </div>
+  );
+};
+
+// --- 主組件 ---
+
+const App = () => {
+  const [currentPage, setCurrentPage] = useState('home');
+  const [studentName, setStudentName] = useState('');
+  const [content, setContent] = useState('');
+  const [file, setFile] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState(null);
+  const [searchName, setSearchName] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [loginError, setLoginError] = useState('');
+
+  // --- TTS 功能 ---
+  const [playingId, setPlayingId] = useState(null);
+  const synth = window.speechSynthesis;
+
+  const handleSpeak = (text, id) => {
+    if (playingId === id) {
+      synth.cancel();
+      setPlayingId(null);
+      return;
+    }
+    synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'zh-TW';
+    utterance.onend = () => setPlayingId(null);
+    utterance.onstart = () => setPlayingId(id);
+    synth.speak(utterance);
+  };
+
+  // --- 檔案轉 Base64 ---
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  // --- API 呼叫 ---
+  const submitWork = async () => {
+    if (!studentName || !content) return;
+    setIsSubmitting(true);
+    setSubmitStatus('系統正在加密上傳並由 AI 分析評語，請稍候...');
+
+    let fileData = null;
+    let fileName = "";
+    let mimeType = "";
+
+    if (file) {
+      try {
+        fileData = await fileToBase64(file);
+        fileName = file.name;
+        mimeType = file.type;
+      } catch (err) {
+        console.error("File processing error", err);
+      }
+    }
+
+    try {
+      // GAS POST 必須使用 no-cors 模式，但這會導致回傳被瀏覽器隱藏 (opaque)
+      // 我們根據 fetch 是否成功完成來判斷
+      await fetch(GAS_API_URL, {
+        method: 'POST',
+        mode: 'no-cors', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'submit',
+          name: studentName,
+          content: content,
+          fileName: fileName,
+          fileData: fileData,
+          mimeType: mimeType
+        })
+      });
+      
+      setSubmitStatus('作品與檔案已成功送出！請確認信箱與試算表。');
+      setStudentName('');
+      setContent('');
+      setFile(null);
+    } catch (error) {
+      setSubmitStatus('提交過程發生網路錯誤，請重新嘗試。');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const queryReviews = async () => {
+    if (!searchName) return;
+    setIsSearching(true);
+    try {
+      const response = await fetch(`${GAS_API_URL}?name=${encodeURIComponent(searchName)}`);
+      const data = await response.json();
+      setSearchResults(data);
+    } catch (error) {
+      console.error("Query error:", error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleAdminLogin = () => {
+    if (adminPassword === '0207') {
+      setIsAdminAuthenticated(true);
+      setLoginError('');
+    } else {
+      setLoginError('密碼錯誤，請重新輸入。');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#FDFDFF] font-sans pb-32 selection:bg-indigo-100 selection:text-indigo-900">
+      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-slate-100 h-20 flex items-center">
+        <div className="max-w-6xl mx-auto px-6 w-full flex justify-between items-center">
+          <div className="flex items-center gap-2 font-black text-2xl text-indigo-600 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setCurrentPage('home')}>
+            <Award size={32} />
+            學生作品系統
+          </div>
+          <div className="hidden md:flex gap-8">
+            <button onClick={() => setCurrentPage('home')} className={`text-sm font-black transition-all hover:text-indigo-500 ${currentPage === 'home' ? 'text-indigo-600' : 'text-slate-400'}`}>作品上傳</button>
+            <button onClick={() => setCurrentPage('query')} className={`text-sm font-black transition-all hover:text-indigo-500 ${currentPage === 'query' ? 'text-indigo-600' : 'text-slate-400'}`}>評語查詢</button>
+            <button onClick={() => setCurrentPage('admin')} className={`text-sm font-black transition-all hover:text-indigo-500 ${currentPage === 'admin' ? 'text-indigo-600' : 'text-slate-400'}`}>管理後台</button>
+          </div>
+        </div>
+      </nav>
+
+      <main className="pt-10 max-w-6xl mx-auto px-4">
+        {currentPage === 'home' && (
+          <Home 
+            studentName={studentName} setStudentName={setStudentName}
+            content={content} setContent={setContent}
+            file={file} setFile={setFile}
+            isSubmitting={isSubmitting} submitStatus={submitStatus}
+            submitWork={submitWork}
+          />
+        )}
+        {currentPage === 'query' && (
+          <QueryView 
+            searchName={searchName} setSearchName={setSearchName}
+            isSearching={isSearching} queryReviews={queryReviews}
+            searchResults={searchResults} playingId={playingId}
+            handleSpeak={handleSpeak}
+          />
+        )}
+        {currentPage === 'admin' && (
+          <TeacherPanel 
+            isAdminAuthenticated={isAdminAuthenticated} setIsAdminAuthenticated={setIsAdminAuthenticated}
+            adminPassword={adminPassword} setAdminPassword={setAdminPassword}
+            loginError={loginError} handleAdminLogin={handleAdminLogin}
+          />
+        )}
+      </main>
+
+      {/* 手機導航 */}
+      <div className="md:hidden fixed bottom-8 left-8 right-8 h-20 bg-slate-900 rounded-[2.5rem] flex justify-around items-center px-4 z-50 shadow-2xl border border-white/10">
+        <button onClick={() => setCurrentPage('home')} className={`text-white transition-opacity ${currentPage === 'home' ? 'opacity-100' : 'opacity-40'}`}><Send size={24} /></button>
+        <button onClick={() => setCurrentPage('query')} className={`text-white transition-opacity ${currentPage === 'query' ? 'opacity-100' : 'opacity-40'}`}><Search size={24} /></button>
+        <button onClick={() => setCurrentPage('admin')} className={`text-white transition-opacity ${currentPage === 'admin' ? 'opacity-100' : 'opacity-40'}`}><Lock size={24} /></button>
+      </div>
+    </div>
+  );
+};
+
+export default App;
