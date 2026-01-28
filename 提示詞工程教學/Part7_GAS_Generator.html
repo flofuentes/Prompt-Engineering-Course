@@ -609,19 +609,23 @@
             </div>
 
             <!-- 步驟一：選擇部署方式 -->
-            <h2>步驟一：選擇部署方式</h2>
+            <h2>步驟一：選擇前端部署方式</h2>
+            <div class="info-box">
+                <h4>說明</h4>
+                <p>GAS（後端）程式碼不管選擇哪種前端部署方式都相同，都需要部署 GAS 並取得網址。</p>
+            </div>
             <div class="deploy-tabs">
                 <div class="deploy-tab active" data-deploy="netlify" onclick="selectDeploy('netlify')">
                     <span class="tab-badge recommend">推薦</span>
-                    <div class="tab-icon">Netlify</div>
+                    <div class="tab-icon">🌐</div>
                     <div class="tab-name">Netlify 部署</div>
-                    <div class="tab-desc">前端部署於 Netlify 免費空間<br>載入快、網址短、拖曳即可部署</div>
+                    <div class="tab-desc">下載 HTML 檔案，拖曳上傳至 Netlify<br>載入快、網址短、免費使用</div>
                 </div>
-                <div class="deploy-tab" data-deploy="gas" onclick="selectDeploy('gas')">
-                    <span class="tab-badge">Google 全家桶</span>
-                    <div class="tab-icon">GAS</div>
-                    <div class="tab-name">GAS 部署</div>
-                    <div class="tab-desc">前後端都在 Google Apps Script<br>不需額外帳號、純 Google 服務</div>
+                <div class="deploy-tab" data-deploy="gemini-canvas" onclick="selectDeploy('gemini-canvas')">
+                    <span class="tab-badge">免部署</span>
+                    <div class="tab-icon">✨</div>
+                    <div class="tab-name">Gemini Canvas</div>
+                    <div class="tab-desc">直接在 Gemini 對話中執行<br>無需額外部署、即時預覽</div>
                 </div>
             </div>
 
@@ -649,8 +653,8 @@
                     <input type="text" id="adminPassword" placeholder="例如：teacher123" value="0207">
                 </div>
                 <div class="form-group" id="gasUrlGroup">
-                    <label>GAS 部署網址
-                        <span class="hint">部署 GAS 後取得的網址（Netlify 部署時填入）</span>
+                    <label>GAS 部署網址 <span class="required">*</span>
+                        <span class="hint">部署 GAS 後端程式後取得的網址（必填）</span>
                     </label>
                     <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/...">
                 </div>
@@ -805,14 +809,7 @@
             document.querySelectorAll('.deploy-tab').forEach(tab => {
                 tab.classList.toggle('active', tab.dataset.deploy === deploy);
             });
-
-            // 根據部署方式調整 GAS URL 欄位
-            const gasUrlGroup = document.getElementById('gasUrlGroup');
-            if (deploy === 'netlify') {
-                gasUrlGroup.style.display = 'block';
-            } else {
-                gasUrlGroup.style.display = 'none';
-            }
+            // GAS URL 欄位始終顯示，因為任何部署方式都需要 GAS 後端
         }
 
         function selectProvider(provider) {
@@ -917,7 +914,14 @@
         }
 
         function generateMainCode(config) {
-            const gasUrl = selectedDeploy === 'netlify' ? config.gasUrl : '"; // GAS 部署時會自動取得';
+            const gasUrl = config.gasUrl;
+
+            // Gemini Canvas 版本 - 較簡化的格式，適合直接貼到 Gemini
+            if (selectedDeploy === 'gemini-canvas') {
+                return generateGeminiCanvasCode(config, gasUrl);
+            }
+
+            // Netlify 版本 - 完整 HTML 檔案
 
             return `<!DOCTYPE html>
 <html lang="zh-TW">
@@ -1226,6 +1230,199 @@
         }
 
         // 初始渲染
+        render();
+    <\/script>
+</body>
+</html>`;
+        }
+
+        function generateGeminiCanvasCode(config, gasUrl) {
+            return `<!-- ============================================
+     Gemini Canvas 版本 - 學生作品評量系統
+     直接貼到 Gemini 對話中使用
+     生成時間：${new Date().toLocaleString('zh-TW')}
+============================================ -->
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學生作品評量系統</title>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-4">
+    <div id="app" class="max-w-2xl mx-auto"></div>
+    <script>
+        // ======== 配置設定 ========
+        const GAS_API_URL = "${gasUrl}";
+        const ADMIN_PASSWORD = "${config.adminPassword}";
+
+        // ======== 狀態管理 ========
+        let state = {
+            page: 'home',
+            name: '',
+            content: '',
+            file: null,
+            loading: false,
+            message: '',
+            searchName: '',
+            results: [],
+            adminAuth: false
+        };
+
+        // ======== 主要渲染 ========
+        function render() {
+            const app = document.getElementById('app');
+            app.innerHTML = \`
+                <nav class="flex gap-4 mb-8 bg-white p-4 rounded-2xl shadow">
+                    <button onclick="state.page='home';render()" class="px-4 py-2 rounded-xl font-bold \${state.page==='home'?'bg-indigo-600 text-white':'bg-gray-100'}">作品上傳</button>
+                    <button onclick="state.page='query';render()" class="px-4 py-2 rounded-xl font-bold \${state.page==='query'?'bg-indigo-600 text-white':'bg-gray-100'}">評語查詢</button>
+                    <button onclick="state.page='admin';render()" class="px-4 py-2 rounded-xl font-bold \${state.page==='admin'?'bg-indigo-600 text-white':'bg-gray-100'}">管理後台</button>
+                </nav>
+                \${state.page === 'home' ? renderHome() : state.page === 'query' ? renderQuery() : renderAdmin()}
+            \`;
+        }
+
+        function renderHome() {
+            return \`
+                <div class="bg-white p-8 rounded-2xl shadow-xl">
+                    <h1 class="text-2xl font-bold text-center mb-6 text-indigo-600">作品繳交系統</h1>
+                    <div class="space-y-4">
+                        <input type="text" placeholder="學生姓名" value="\${state.name}" oninput="state.name=this.value"
+                            class="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent focus:border-indigo-500 outline-none">
+                        <textarea rows="5" placeholder="作品內容或描述" oninput="state.content=this.value"
+                            class="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent focus:border-indigo-500 outline-none resize-none">\${state.content}</textarea>
+                        <input type="file" onchange="state.file=this.files[0];render()"
+                            class="w-full px-4 py-3 rounded-xl bg-indigo-50 border-2 border-dashed border-indigo-200">
+                        \${state.file ? '<p class="text-indigo-600 text-sm">已選擇：'+state.file.name+'</p>' : ''}
+                        <button onclick="submitWork()" \${state.loading?'disabled':''}
+                            class="w-full py-4 rounded-xl font-bold text-white \${state.loading?'bg-gray-400':'bg-indigo-600 hover:bg-indigo-700'}">
+                            \${state.loading ? '提交中...' : '確認提交'}
+                        </button>
+                        \${state.message ? '<p class="text-center font-bold '+(state.message.includes('成功')?'text-green-600':'text-red-600')+'">'+state.message+'</p>' : ''}
+                    </div>
+                </div>
+            \`;
+        }
+
+        function renderQuery() {
+            return \`
+                <div class="bg-white p-8 rounded-2xl shadow-xl">
+                    <h1 class="text-2xl font-bold text-center mb-6 text-indigo-600">評語查詢</h1>
+                    <div class="flex gap-4 mb-6">
+                        <input type="text" placeholder="輸入姓名搜尋" value="\${state.searchName}"
+                            oninput="state.searchName=this.value" onkeydown="if(event.key==='Enter')queryResults()"
+                            class="flex-1 px-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent focus:border-indigo-500 outline-none">
+                        <button onclick="queryResults()" class="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700">搜尋</button>
+                    </div>
+                    <div class="space-y-4">
+                        \${state.results.map(r => \`
+                            <div class="p-6 bg-gray-50 rounded-xl border-l-4 border-indigo-500">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <p class="text-xs text-gray-400">\${new Date(r.time).toLocaleString('zh-TW')}</p>
+                                        <p class="font-bold text-lg">\${r.name} 同學</p>
+                                    </div>
+                                    <span class="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold">\${r.fourCharComment}</span>
+                                </div>
+                                <p class="text-gray-700">\${r.feedback}</p>
+                                \${r.fileUrl ? '<a href="'+r.fileUrl+'" target="_blank" class="inline-block mt-3 text-indigo-600 font-medium hover:underline">查看附件</a>' : ''}
+                            </div>
+                        \`).join('') || (state.searchName && !state.loading ? '<p class="text-center text-gray-400">找不到紀錄</p>' : '')}
+                    </div>
+                </div>
+            \`;
+        }
+
+        function renderAdmin() {
+            if (!state.adminAuth) {
+                return \`
+                    <div class="bg-white p-8 rounded-2xl shadow-xl max-w-md mx-auto">
+                        <h2 class="text-xl font-bold text-center mb-6">管理登入</h2>
+                        <input type="password" id="adminPwd" placeholder="請輸入密碼" onkeydown="if(event.key==='Enter')adminLogin()"
+                            class="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent focus:border-indigo-500 outline-none mb-4">
+                        <button onclick="adminLogin()" class="w-full py-3 bg-indigo-900 text-white rounded-xl font-bold hover:bg-black">登入</button>
+                    </div>
+                \`;
+            }
+            return \`
+                <div class="bg-white p-8 rounded-2xl shadow-xl text-center">
+                    <h2 class="text-xl font-bold mb-6">教師管理中心</h2>
+                    <div class="p-6 bg-green-50 rounded-xl mb-4">
+                        <p class="text-green-700 mb-4">系統連接正常</p>
+                        <a href="https://docs.google.com/spreadsheets/d/${config.spreadsheetId}" target="_blank"
+                            class="px-6 py-3 bg-white rounded-xl font-bold text-indigo-700 shadow hover:shadow-lg inline-block">開啟試算表</a>
+                    </div>
+                    <button onclick="state.adminAuth=false;render()" class="text-gray-400 hover:text-red-500">登出</button>
+                </div>
+            \`;
+        }
+
+        // ======== 功能函數 ========
+        async function submitWork() {
+            if (!state.name || !state.content) return alert('請填寫姓名和內容');
+            state.loading = true;
+            state.message = '正在提交...';
+            render();
+
+            let fileData = null, fileName = '', mimeType = '';
+            if (state.file) {
+                try {
+                    fileData = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(state.file);
+                        reader.onload = () => resolve(reader.result.split(',')[1]);
+                        reader.onerror = reject;
+                    });
+                    fileName = state.file.name;
+                    mimeType = state.file.type;
+                } catch (e) { console.error(e); }
+            }
+
+            try {
+                await fetch(GAS_API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'submit', name: state.name, content: state.content, fileName, fileData, mimeType })
+                });
+                state.message = '作品已成功送出！';
+                state.name = '';
+                state.content = '';
+                state.file = null;
+            } catch (e) {
+                state.message = '提交失敗，請重試';
+            } finally {
+                state.loading = false;
+                render();
+            }
+        }
+
+        async function queryResults() {
+            if (!state.searchName) return;
+            state.loading = true;
+            render();
+            try {
+                const res = await fetch(\`\${GAS_API_URL}?name=\${encodeURIComponent(state.searchName)}\`);
+                state.results = await res.json();
+            } catch (e) {
+                state.results = [];
+            } finally {
+                state.loading = false;
+                render();
+            }
+        }
+
+        function adminLogin() {
+            const pwd = document.getElementById('adminPwd').value;
+            if (pwd === ADMIN_PASSWORD) {
+                state.adminAuth = true;
+            } else {
+                alert('密碼錯誤');
+            }
+            render();
+        }
+
         render();
     <\/script>
 </body>
@@ -1662,54 +1859,54 @@ function testOpenAIAPI() {
                     </div>
                 `;
             } else {
-                title.textContent = 'GAS 全部署步驟';
+                title.textContent = 'Gemini Canvas + GAS 部署步驟';
                 steps.innerHTML = `
                     <div class="deploy-step">
                         <span class="step-num">1</span>
                         <div class="step-content">
-                            <p><strong>建立 GAS 專案</strong> - 前往 <a href="https://script.google.com" target="_blank">Google Apps Script</a>，建立新專案</p>
+                            <p><strong>部署 GAS 程式</strong> - 前往 <a href="https://script.google.com" target="_blank">Google Apps Script</a>，建立新專案，貼上 GAS 程式碼</p>
                         </div>
                     </div>
                     <div class="deploy-step">
                         <span class="step-num">2</span>
                         <div class="step-content">
-                            <p><strong>貼上 GAS 程式碼</strong> - 在 Code.gs 檔案中貼上 GAS 程式碼</p>
+                            <p><strong>啟用 Drive API</strong> - 在 GAS 編輯器左側點擊「服務」→ 新增「Drive API」</p>
                         </div>
                     </div>
                     <div class="deploy-step">
                         <span class="step-num">3</span>
                         <div class="step-content">
-                            <p><strong>建立 HTML 檔案</strong> - 點擊「+」→「HTML」，命名為 index，貼上主程式 HTML 程式碼</p>
+                            <p><strong>執行授權測試</strong> - 執行 manualAuthTest 函數，允許 Google 權限</p>
                         </div>
                     </div>
                     <div class="deploy-step">
                         <span class="step-num">4</span>
                         <div class="step-content">
-                            <p><strong>修改 doGet 函數</strong> - 在 GAS 程式碼最上方加入：<br><code>function doGet() { return HtmlService.createHtmlOutputFromFile('index'); }</code></p>
+                            <p><strong>部署為網路應用程式</strong> - 點擊「部署」→「新增部署」→「網路應用程式」<br>執行身分：「我」/ 存取權：「所有人」</p>
                         </div>
                     </div>
                     <div class="deploy-step">
                         <span class="step-num">5</span>
                         <div class="step-content">
-                            <p><strong>啟用 Drive API</strong> - 在左側點擊「服務」→ 新增「Drive API」</p>
+                            <p><strong>複製部署網址</strong> - 複製產生的網址，填入生成器重新生成主程式</p>
                         </div>
                     </div>
                     <div class="deploy-step">
                         <span class="step-num">6</span>
                         <div class="step-content">
-                            <p><strong>執行授權測試</strong> - 執行 manualAuthTest 函數，允許 Google 權限</p>
+                            <p><strong>開啟 Gemini</strong> - 前往 <a href="https://gemini.google.com" target="_blank">Google Gemini</a>（需登入 Google 帳號）</p>
                         </div>
                     </div>
                     <div class="deploy-step">
                         <span class="step-num">7</span>
                         <div class="step-content">
-                            <p><strong>部署為網路應用程式</strong> - 點擊「部署」→「新增部署」→「網路應用程式」<br>執行身分：「我」/ 存取權：「所有人」</p>
+                            <p><strong>使用 Canvas 功能</strong> - 在 Gemini 對話中，直接貼上主程式 HTML 程式碼，並要求 Gemini 顯示在 Canvas 中</p>
                         </div>
                     </div>
                     <div class="deploy-step">
                         <span class="step-num">8</span>
                         <div class="step-content">
-                            <p><strong>複製網址</strong> - 部署完成後的網址就是您的評量網站網址</p>
+                            <p><strong>執行與測試</strong> - Gemini Canvas 會即時渲染網頁，可直接進行測試。若需分享，可請 Gemini 產生分享連結</p>
                         </div>
                     </div>
                 `;
